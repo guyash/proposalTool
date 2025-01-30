@@ -742,8 +742,8 @@ function Tool() {
                         >
                             <Box
                                 component="img"
-                                src="/assets/visionVoyage/visionVoyageLogo.png"
-                                alt="VisionVoyage Logo"
+                                src="/assets/vayomar/vayomarLogo.png"
+                                alt="vayomar Logo"
                                 sx={{
                                     width: 30,
                                     height: 30,
@@ -755,15 +755,15 @@ function Tool() {
                                 component="span"
                                 sx={{ fontSize: 12, color: 'text.secondary', fontWeight: 'bold' }}
                             >
-                                Powered by&nbsp;
+                                Property of&nbsp;
                             </Typography>
                             <Link
-                                href="https://visionvoyage.ai"
+                                href="https://vayomar.com"
                                 underline="none"
                                 target="_blank"
                                 sx={{ fontSize: 12, fontWeight: 'bold' }}
                             >
-                                VisionVoyage.ai
+                                Vayomar.com
                             </Link>
                         </Box>
                     </Box>
