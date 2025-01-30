@@ -14,7 +14,6 @@ import awsConfig from './aws-config';
 
 if (process.env.REACT_APP_NODE_ENV !== 'production') {
   import('./aws-exports').then((awsconfig) => {
-    console.log("AWS Access Key:", awsConfig.accessKeyId); // GUY
     Amplify.configure(awsconfig.default);
   }).catch((error) => {
     console.error("Error loading aws-exports:", error);
@@ -113,11 +112,9 @@ const HomeRedirect = () => {
   React.useEffect(() => {
     fetchAuthSession()
       .then((session) => {
-        if (session) {
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
+        const hasValidCredentials = session?.credentials?.accessKeyId;
+        console.log("Session object:", session);
+        setIsAuthenticated(!!hasValidCredentials);
         setLoading(false);
       })
       .catch(() => {
