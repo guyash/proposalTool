@@ -1,4 +1,25 @@
 {
+  "main": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-proposaltool-main-4497f-authRole",
+      "UnauthRoleArn": "arn:aws:iam::842566784750:role/amplify-proposaltool-main-4497f-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::842566784750:role/amplify-proposaltool-main-4497f-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-proposaltool-main-4497f-deployment",
+      "UnauthRoleName": "amplify-proposaltool-main-4497f-unauthRole",
+      "StackName": "amplify-proposaltool-main-4497f",
+      "StackId": "arn:aws:cloudformation:us-east-1:842566784750:stack/amplify-proposaltool-main-4497f/a9182400-df3f-11ef-aeaf-12ccdd6c91c1",
+      "AmplifyAppId": "d2x3kszpv7d731"
+    },
+    "categories": {
+      "auth": {
+        "aiproposaltoolbackend": {}
+      },
+      "api": {
+        "aiproposaltoolbackend": {}
+      }
+    }
+  },
   "staging": {
     "awscloudformation": {
       "AuthRoleName": "amplify-aiproposaltoolbacken-staging-0b48b-authRole",
