@@ -13,6 +13,9 @@ import DarkBlankLoadingPage from './pages/DarkBlankLoadingPage/DarkBlankLoadingP
 import awsConfig from './aws-config';
 
 if (process.env.REACT_APP_NODE_ENV !== 'production') {
+  console.log('@@@@@@@@');
+  console.log(awsConfig.accessKeyId);
+  console.log('@@@@@@@@');
   import('./aws-exports').then((awsconfig) => {
     Amplify.configure(awsconfig.default);
   }).catch((error) => {
