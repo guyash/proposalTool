@@ -1,0 +1,18 @@
+projects:
+  aiproposaltoolbackend:
+    schemaPath: amplify/backend/api/aiproposaltoolbackend/build/schema.graphql
+    includes:
+      - requests
+    excludes:
+      - ./amplify/**
+    extensions:
+      amplify:
+        codeGenTarget: javascript
+        generatedFileName: ''
+        docsFilePath: .
+        region: us-east-1
+        apiId: null
+        maxDepth: 2
+extensions:
+  amplify:
+    version: 3

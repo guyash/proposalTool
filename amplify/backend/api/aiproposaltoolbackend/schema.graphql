@@ -1,0 +1,7 @@
+type LandingEmailList @model @auth(rules: [{allow: public}]) {
+  id: ID!
+  email: AWSEmail
+  createdAt: AWSDateTime
+  isForSurvey: Boolean
+  isForSubscription: Boolean
+}
