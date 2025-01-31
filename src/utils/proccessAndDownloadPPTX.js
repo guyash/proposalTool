@@ -19,7 +19,7 @@ async function modifyLineSpacingInZip(zip) {
 }
 
 function modifyLineSpacing(xmlContent) {
-    console.log("xmlContent", xmlContent);
+    // console.log("xmlContent", xmlContent);
     const pPrRegex = /<a:pPr[^>]*>([\s\S]*?)<\/a:pPr>/g;
 
     return xmlContent.replace(pPrRegex, (match, inner) => {
@@ -59,7 +59,7 @@ export function getDateString() {
 
 
 function inspectTextboxPositions(slideDoc, index) {
-    console.log(`--- Inspecting Textbox Positions in Slide ${index + 1} ---`);
+    // console.log(`--- Inspecting Textbox Positions in Slide ${index + 1} ---`);
 
     // Find all shape elements that contain textboxes
     const shapes = slideDoc.getElementsByTagName('p:sp');
@@ -67,7 +67,7 @@ function inspectTextboxPositions(slideDoc, index) {
     Array.from(shapes).forEach((shape, i) => {
         const textBox = shape.getElementsByTagName('p:txBody')[0];
         if (textBox) {
-            console.log(`\nTextbox ${i + 1}:`);
+            // console.log(`\nTextbox ${i + 1}:`);
 
             // Get the position information
             const xfrm = shape.getElementsByTagName('a:xfrm')[0];
@@ -81,27 +81,27 @@ function inspectTextboxPositions(slideDoc, index) {
                     const width = ext.getAttribute('cx');
                     const height = ext.getAttribute('cy');
 
-                    console.log(`  Position: x=${x}, y=${y}`);
-                    console.log(`  Size: width=${width}, height=${height}`);
+                    // console.log(`  Position: x=${x}, y=${y}`);
+                    // console.log(`  Size: width=${width}, height=${height}`);
 
                     // Show how to move this textbox
-                    console.log('\n  To move this textbox:');
-                    console.log(`  const shape = slideDoc.getElementsByTagName('p:sp')[${i}];`);
-                    console.log(`  const xfrm = shape.getElementsByTagName('a:xfrm')[0];`);
-                    console.log(`  const off = xfrm.getElementsByTagName('a:off')[0];`);
-                    console.log(`  // Move 100000 EMUs right and 50000 EMUs down`);
-                    console.log(`  off.setAttribute('x', '${parseInt(x) + 100000}');`);
-                    console.log(`  off.setAttribute('y', '${parseInt(y) + 50000}');`);
+                    // console.log('\n  To move this textbox:');
+                    // console.log(`  const shape = slideDoc.getElementsByTagName('p:sp')[${i}];`);
+                    // console.log(`  const xfrm = shape.getElementsByTagName('a:xfrm')[0];`);
+                    // console.log(`  const off = xfrm.getElementsByTagName('a:off')[0];`);
+                    // console.log(`  // Move 100000 EMUs right and 50000 EMUs down`);
+                    // console.log(`  off.setAttribute('x', '${parseInt(x) + 100000}');`);
+                    // console.log(`  off.setAttribute('y', '${parseInt(y) + 50000}');`);
                 }
             }
 
             // Show a preview of the text content
             const textContent = textBox.textContent.trim().substring(0, 50);
-            console.log(`  Text preview: "${textContent}${textContent.length >= 50 ? '...' : ''}"`);
+            // console.log(`  Text preview: "${textContent}${textContent.length >= 50 ? '...' : ''}"`);
         }
     });
 
-    console.log('\n--- End of Textbox Position Inspection ---\n');
+    // console.log('\n--- End of Textbox Position Inspection ---\n');
 }
 
 
@@ -267,7 +267,7 @@ export default async function proccessAndDownloadPPTX({
                 zip.file(`ppt/media/image${imageId}.png`, imageBuffer); // Use imageId to replace the actual image
 
             } catch (error) {
-                console.log("Error replacing image:", error);
+                console.log(error);
             }
         };
 

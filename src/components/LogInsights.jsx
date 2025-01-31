@@ -25,9 +25,6 @@ function getCurrentFormattedDate() {
 }
 
 const LogInsights = ({ insights, proposalTitle, finalPricingRows, customersSelectedRows, model }) => {
-    console.log('!!!!!!!!');
-    console.log(customersSelectedRows);
-    console.log('!!!!!!!!');
 
     const [downloaded, setDownloaded] = useState(false);
     const editPresentationRef = useRef(null);

@@ -155,9 +155,9 @@ function Tool() {
     const [notificationsPopoverAnchorEl, setNotificationsPopoverAnchorEl] = useState(null);
     const [newVersionPopoverAnchorEl, setNewVersionPopoverAnchorEl] = useState(null);
     const [isNotificationsBadgeInvisible, setIsNotificationsBadgeInvisible] = useState(true);
-    const [model, setModel] = useState('GenesisGPT');
-    const allModels = ['VayomarGPT', 'GenesisGPT'];
-    const [availableModels, setAvailableModels] = useState([]);
+    const [model, setModel] = useState('VayomarGPT');
+    const allModels = ['VayomarGPT'];
+    const [availableModels, setAvailableModels] = useState(['VayomarGPT']);
     // const [showModelPopover, setShowModelPopover] = useState(null);
 
     // ---------------------------------
@@ -166,36 +166,36 @@ function Tool() {
         <Typography ref={ref} {...props} />
     ));
 
-    useEffect(() => {
-        const fetchUserGroups = async () => {
-            fetchAuthSession()
-                .then((session) => {
-                    if (session) {
+    // useEffect(() => {
+    //     const fetchUserGroups = async () => {
+    //         fetchAuthSession()
+    //             .then((session) => {
+    //                 if (session) {
 
-                        let userGroups = session.tokens.accessToken.payload["cognito:groups"] || [];
-                        if (userGroups?.length > 0) {
-                            if (userGroups.includes('Admins')) { // GUY
-                                setAvailableModels(allModels);
-                                setModel("VayomarGPT");
-                            } else if (userGroups.includes('VayomarGPT')) {
-                                setAvailableModels(['VayomarGPT', 'GenesisGPT']);
-                                setModel("VayomarGPT");
-                            } else {
-                                setAvailableModels(['GenesisGPT']);
-                            }
-                        } else {
-                            setAvailableModels(['GenesisGPT']);
-                        }
-                    }
-                })
-                .catch((error) => {
-                    console.error("error ", error)
-                });
-        };
+    //                     let userGroups = session.tokens.accessToken.payload["cognito:groups"] || [];
+    //                     if (userGroups?.length > 0) {
+    //                         if (userGroups.includes('Admins')) {
+    //                             setAvailableModels(allModels);
+    //                             setModel("VayomarGPT");
+    //                         } else if (userGroups.includes('VayomarGPT')) {
+    //                             setAvailableModels(['VayomarGPT', 'GenesisGPT']);
+    //                             setModel("VayomarGPT");
+    //                         } else {
+    //                             setAvailableModels(['GenesisGPT']);
+    //                         }
+    //                     } else {
+    //                         setAvailableModels(['GenesisGPT']);
+    //                     }
+    //                 }
+    //             })
+    //             .catch((error) => {
+    //                 console.error("error ", error)
+    //             });
+    //     };
 
-        fetchUserGroups();
+    //     fetchUserGroups();
 
-    }, []);
+    // }, []);
 
 
     useEffect(() => {

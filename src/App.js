@@ -20,10 +20,9 @@ Amplify.configure({
 // ✅ Force sign-out every time the app loads
 const forceSignOut = async () => {
   try {
-    console.log("🔄 [DEBUG] Signing out user to prevent session persistence...");
     await signOut({ global: true });
   } catch (error) {
-    console.error("⚠️ [ERROR] Sign-out failed:", error);
+    console.error(error);
   }
 };
 
@@ -38,12 +37,11 @@ const ProtectedRoute = ({ children }) => {
   React.useEffect(() => {
     fetchAuthSession()
       .then((session) => {
-        console.log("🔍 [DEBUG] Session Object:", session);
         const validAuth = !!session?.tokens?.accessToken;
         setIsAuthenticated(validAuth);
       })
       .catch((error) => {
-        console.error("⚠️ [ERROR] fetchAuthSession failed:", error);
+        console.error(error);
         setIsAuthenticated(false);
       })
       .finally(() => setLoading(false));
@@ -61,12 +59,11 @@ const UnauthenticatedRoute = ({ children }) => {
   React.useEffect(() => {
     fetchAuthSession()
       .then((session) => {
-        console.log("🔍 [DEBUG] Session Object:", session);
         const validAuth = !!session?.tokens?.accessToken;
         setIsAuthenticated(validAuth);
       })
       .catch((error) => {
-        console.error("⚠️ [ERROR] fetchAuthSession failed:", error);
+        console.error(error);
         setIsAuthenticated(false);
       })
       .finally(() => setLoading(false));
@@ -84,12 +81,11 @@ const HomeRedirect = () => {
   React.useEffect(() => {
     fetchAuthSession()
       .then((session) => {
-        console.log("🔍 [DEBUG] Session Object:", session);
         const validAuth = !!session?.tokens?.accessToken;
         setIsAuthenticated(validAuth);
       })
       .catch((error) => {
-        console.error("⚠️ [ERROR] fetchAuthSession failed:", error);
+        console.error(error);
         setIsAuthenticated(false);
       })
       .finally(() => setLoading(false));
