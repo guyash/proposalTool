@@ -59,14 +59,16 @@ const ProtectedRoute = ({ children }) => {
   React.useEffect(() => {
     fetchAuthSession()
       .then((session) => {
-        if (session) {
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
+        console.log("Session object:", session); // Debugging
+  
+        // Ensure session contains a valid access token
+        const validAuth = session?.tokens?.accessToken?.toString().length > 0;
+  
+        setIsAuthenticated(validAuth);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("fetchAuthSession failed:", error);
         setIsAuthenticated(false);
         setLoading(false);
       });
@@ -87,14 +89,16 @@ const UnauthenticatedRoute = ({ children }) => {
   React.useEffect(() => {
     fetchAuthSession()
       .then((session) => {
-        if (session) {
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
+        console.log("Session object:", session); // Debugging
+  
+        // Ensure session contains a valid access token
+        const validAuth = session?.tokens?.accessToken?.toString().length > 0;
+  
+        setIsAuthenticated(validAuth);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("fetchAuthSession failed:", error);
         setIsAuthenticated(false);
         setLoading(false);
       });
@@ -115,13 +119,16 @@ const HomeRedirect = () => {
   React.useEffect(() => {
     fetchAuthSession()
       .then((session) => {
-        return session.identityId;  // This is more reliable for Cognito-based auth
-      })
-      .then((identityId) => {
-        setIsAuthenticated(!!identityId);
+        console.log("Session object:", session); // Debugging
+  
+        // Ensure session contains a valid access token
+        const validAuth = session?.tokens?.accessToken?.toString().length > 0;
+  
+        setIsAuthenticated(validAuth);
         setLoading(false);
       })
-      .catch(() => {
+      .catch((error) => {
+        console.error("fetchAuthSession failed:", error);
         setIsAuthenticated(false);
         setLoading(false);
       });
