@@ -115,9 +115,10 @@ const HomeRedirect = () => {
   React.useEffect(() => {
     fetchAuthSession()
       .then((session) => {
-        const hasValidCredentials = session?.credentials?.accessKeyId;
-        console.log("Session object:", session);
-        setIsAuthenticated(!!hasValidCredentials);
+        return session.identityId;  // This is more reliable for Cognito-based auth
+      })
+      .then((identityId) => {
+        setIsAuthenticated(!!identityId);
         setLoading(false);
       })
       .catch(() => {
