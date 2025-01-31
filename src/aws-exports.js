@@ -6,7 +6,30 @@ const awsmobile = {
     "aws_appsync_graphqlEndpoint": "https://vovy5y4xzjctppsgygtowvlwt4.appsync-api.us-east-1.amazonaws.com/graphql",
     "aws_appsync_region": "us-east-1",
     "aws_appsync_authenticationType": "API_KEY",
-    "aws_appsync_apiKey": "da2-2ceitradknbaplbqeez745dtle"
+    "aws_appsync_apiKey": "da2-2ceitradknbaplbqeez745dtle",
+    "aws_cognito_identity_pool_id": "us-east-1:5a34e9e8-32ef-4cd5-a8cd-1ec4b28d3a88",
+    "aws_cognito_region": "us-east-1",
+    "aws_user_pools_id": "us-east-1_iL9noW7lD",
+    "aws_user_pools_web_client_id": "37mmiq7dlnkms51aiclvq5ja18",
+    "oauth": {},
+    "aws_cognito_username_attributes": [
+        "EMAIL"
+    ],
+    "aws_cognito_social_providers": [],
+    "aws_cognito_signup_attributes": [
+        "EMAIL"
+    ],
+    "aws_cognito_mfa_configuration": "OFF",
+    "aws_cognito_mfa_types": [
+        "SMS"
+    ],
+    "aws_cognito_password_protection_settings": {
+        "passwordPolicyMinLength": 8,
+        "passwordPolicyCharacters": []
+    },
+    "aws_cognito_verification_mechanisms": [
+        "EMAIL"
+    ]
 };
 
 
