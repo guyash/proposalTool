@@ -12,9 +12,6 @@
       "AmplifyAppId": "d2x3kszpv7d731"
     },
     "categories": {
-      "auth": {
-        "aiproposaltoolbackend": {}
-      },
       "api": {
         "aiproposaltoolbackend": {}
       }
