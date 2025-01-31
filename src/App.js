@@ -3,7 +3,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { Amplify } from 'aws-amplify';
-import { fetchAuthSession } from '@aws-amplify/auth';
+import { fetchAuthSession, signOut, getCurrentUser } from '@aws-amplify/auth';
 // import awsconfig from './aws-exports'; // Ensure this path is correct
 import Landing from './pages/Landing/Landing';
 import Tool from './pages/Tool/Tool';
@@ -11,6 +11,26 @@ import SignIn from './pages/SignIn/SignIn';
 import DarkBlankLoadingPage from './pages/DarkBlankLoadingPage/DarkBlankLoadingPage';
 
 import awsConfig from './aws-config';
+
+// Force refresh session before checking auth
+const refreshSession = async () => {
+  try {
+    console.log("🔄 [DEBUG] Attempting to refresh session...");
+
+    // First, check if a user exists
+    const user = await getCurrentUser();
+    console.log("✅ [DEBUG] User found:", user);
+
+    // Now fetch the session
+    const session = await fetchAuthSession();
+    console.log("🔍 [DEBUG] Refreshed Session Object:", session);
+
+    return session;
+  } catch (error) {
+    console.error("⚠️ [ERROR] Failed to refresh session:", error);
+    return null;
+  }
+};
 
 if (process.env.REACT_APP_NODE_ENV !== 'production') {
   import('./aws-exports').then((awsconfig) => {
@@ -75,26 +95,21 @@ const ProtectedRoute = ({ children }) => {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    const debugSession = async () => {
-      try {
-        const session = await fetchAuthSession();
-        console.log("🔍 [DEBUG] Session Object:", session);
+    const verifySession = async () => {
+      const session = await refreshSession();
 
-        const accessToken = session?.tokens?.accessToken?.toString() || "No Access Token";
-        console.log("🔍 [DEBUG] Access Token:", accessToken);
-
-        const idToken = session?.tokens?.idToken?.toString() || "No ID Token";
-        console.log("🔍 [DEBUG] ID Token:", idToken);
-
-        const validAuth = !!session?.tokens?.accessToken;
-        setIsAuthenticated(validAuth);
-      } catch (error) {
-        console.error("⚠️ [ERROR] fetchAuthSession failed:", error);
+      if (session?.tokens?.accessToken) {
+        console.log("✅ [DEBUG] Valid session found!");
+        setIsAuthenticated(true);
+      } else {
+        console.warn("⚠️ [DEBUG] No valid session found, redirecting to sign-in.");
+        setIsAuthenticated(false);
       }
+
       setLoading(false);
     };
 
-    debugSession();
+    verifySession();
   }, []);
 
   if (loading) {

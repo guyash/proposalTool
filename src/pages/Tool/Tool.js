@@ -174,7 +174,7 @@ function Tool() {
 
                         let userGroups = session.tokens.accessToken.payload["cognito:groups"] || [];
                         if (userGroups?.length > 0) {
-                            if (userGroups.includes('Admins')) {
+                            if (userGroups.includes('Admins')) { // GUY
                                 setAvailableModels(allModels);
                                 setModel("VayomarGPT");
                             } else if (userGroups.includes('VayomarGPT')) {
