@@ -14,7 +14,19 @@ import awsConfig from './aws-config';
 
 if (process.env.REACT_APP_NODE_ENV !== 'production') {
   import('./aws-exports').then((awsconfig) => {
-    Amplify.configure(awsconfig.default);
+    Amplify.configure({
+      ...awsconfig.default,
+      Auth: {
+        ...awsconfig.default.Auth,
+        storage: window.localStorage, // ✅ Ensure session persists in localStorage
+        cookieStorage: {
+          domain: window.location.hostname, // ✅ Ensure correct domain
+          secure: true, // ✅ Only use HTTPS in production
+          path: "/",
+          expires: 365, // ✅ Store session for 1 year
+        },
+      },
+    });
   }).catch((error) => {
     console.error("Error loading aws-exports:", error);
   });
@@ -44,7 +56,16 @@ if (process.env.REACT_APP_NODE_ENV !== 'production') {
         "REQUIRES_UPPERCASE"
       ]
     },
-    "aws_cognito_verification_mechanisms": ["EMAIL"]
+    "aws_cognito_verification_mechanisms": ["EMAIL"],
+    Auth: {
+      storage: window.localStorage, // ✅ Store session in localStorage
+      cookieStorage: {
+        domain: window.location.hostname, // ✅ Ensure correct domain
+        secure: true, // ✅ Enable HTTPS in production
+        path: "/",
+        expires: 365, // ✅ Persist session for 1 year
+      },
+    }
   });
 }
 
