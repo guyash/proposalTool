@@ -54,21 +54,26 @@ const ProtectedRoute = ({ children }) => {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    fetchAuthSession()
-      .then((session) => {
-        console.log("Session object:", session); // Debugging
-  
-        // Ensure session contains a valid access token
-        const validAuth = session?.tokens?.accessToken?.toString().length > 0;
-  
+    const debugSession = async () => {
+      try {
+        const session = await fetchAuthSession();
+        console.log("🔍 [DEBUG] Session Object:", session);
+
+        const accessToken = session?.tokens?.accessToken?.toString() || "No Access Token";
+        console.log("🔍 [DEBUG] Access Token:", accessToken);
+
+        const idToken = session?.tokens?.idToken?.toString() || "No ID Token";
+        console.log("🔍 [DEBUG] ID Token:", idToken);
+
+        const validAuth = !!session?.tokens?.accessToken;
         setIsAuthenticated(validAuth);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("fetchAuthSession failed:", error);
-        setIsAuthenticated(false);
-        setLoading(false);
-      });
+      } catch (error) {
+        console.error("⚠️ [ERROR] fetchAuthSession failed:", error);
+      }
+      setLoading(false);
+    };
+
+    debugSession();
   }, []);
 
   if (loading) {
@@ -84,21 +89,26 @@ const UnauthenticatedRoute = ({ children }) => {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    fetchAuthSession()
-      .then((session) => {
-        console.log("Session object:", session); // Debugging
-  
-        // Ensure session contains a valid access token
-        const validAuth = session?.tokens?.accessToken?.toString().length > 0;
-  
+    const debugSession = async () => {
+      try {
+        const session = await fetchAuthSession();
+        console.log("🔍 [DEBUG] Session Object:", session);
+
+        const accessToken = session?.tokens?.accessToken?.toString() || "No Access Token";
+        console.log("🔍 [DEBUG] Access Token:", accessToken);
+
+        const idToken = session?.tokens?.idToken?.toString() || "No ID Token";
+        console.log("🔍 [DEBUG] ID Token:", idToken);
+
+        const validAuth = !!session?.tokens?.accessToken;
         setIsAuthenticated(validAuth);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("fetchAuthSession failed:", error);
-        setIsAuthenticated(false);
-        setLoading(false);
-      });
+      } catch (error) {
+        console.error("⚠️ [ERROR] fetchAuthSession failed:", error);
+      }
+      setLoading(false);
+    };
+
+    debugSession();
   }, []);
 
   if (loading) {
@@ -114,21 +124,26 @@ const HomeRedirect = () => {
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    fetchAuthSession()
-      .then((session) => {
-        console.log("Session object:", session); // Debugging
-  
-        // Ensure session contains a valid access token
-        const validAuth = session?.tokens?.accessToken?.toString().length > 0;
-  
+    const debugSession = async () => {
+      try {
+        const session = await fetchAuthSession();
+        console.log("🔍 [DEBUG] Session Object:", session);
+
+        const accessToken = session?.tokens?.accessToken?.toString() || "No Access Token";
+        console.log("🔍 [DEBUG] Access Token:", accessToken);
+
+        const idToken = session?.tokens?.idToken?.toString() || "No ID Token";
+        console.log("🔍 [DEBUG] ID Token:", idToken);
+
+        const validAuth = !!session?.tokens?.accessToken;
         setIsAuthenticated(validAuth);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("fetchAuthSession failed:", error);
-        setIsAuthenticated(false);
-        setLoading(false);
-      });
+      } catch (error) {
+        console.error("⚠️ [ERROR] fetchAuthSession failed:", error);
+      }
+      setLoading(false);
+    };
+
+    debugSession();
   }, []);
 
   if (loading) {
