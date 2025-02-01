@@ -234,10 +234,10 @@ export default async function proccessAndDownloadPPTX({
         console.log(model);
         console.log('@@@@@@@');
 
-        // const modelTemplatePath = model == 'VayomarGPT' ? "/proposal_template.pptx" : "/proposal_template_genesis.pptx";
+        const modelTemplatePath = model == 'VayomarGPT' ? "/proposal_template.pptx" : "/proposal_template_genesis.pptx";
 
         // proposal_template.pptx was uploaded to S3 because it wasn't found by amplify in the build itself
-        const modelTemplatePath = "https://proposal-tool-1.s3.us-east-1.amazonaws.com/dev_files/proposal_template.pptx";
+        // const modelTemplatePath = "https://proposal-tool-1.s3.us-east-1.amazonaws.com/dev_files/proposal_template.pptx";
 
 
         const response = await axios.get(modelTemplatePath, {
