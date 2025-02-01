@@ -231,7 +231,7 @@ export default async function proccessAndDownloadPPTX({
         const parser = new DOMParser();
 
         console.log('@@@@@@@');
-        console.log(model); //GUY
+        console.log(model); //GUY1
         console.log('@@@@@@@');
 
         const modelTemplatePath = model == 'VayomarGPT' ? "/proposal_template.pptx" : "/proposal_template_genesis.pptx";
