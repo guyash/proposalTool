@@ -27,6 +27,8 @@ yarn-error.log*
 /public/assets/methdologies
 /public/assets/program_structures
 /public/proposal_template_backup.pptx
+/public/proposal_template_backup_new.pptx
+/public/proposal_template_genesis.pptx
 
 
 # files
