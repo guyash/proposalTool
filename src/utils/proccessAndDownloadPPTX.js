@@ -151,7 +151,7 @@ async function deleteSlides(zip, programStructure, methodology, model) {
     });
     const indexesToKeep = indexesToKeep_programStructure.concat(indexesToKeep_methodology);
 
-    const slidesToDelete = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33].filter(index => !indexesToKeep.includes(index));
+    const slidesToDelete = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51].filter(index => !indexesToKeep.includes(index));
 
     // Sort slidesToDelete in descending order to avoid index shifting
     slidesToDelete.sort((a, b) => b - a);
@@ -230,15 +230,26 @@ export default async function proccessAndDownloadPPTX({
         const serializer = new XMLSerializer();
         const parser = new DOMParser();
 
+        console.log('@@@@@@@');
+        console.log(model);
+        console.log('@@@@@@@');
+
         const modelTemplatePath = model == 'VayomarGPT' ? "/proposal_template.pptx" : "/proposal_template_genesis.pptx";
 
         const response = await axios.get(modelTemplatePath, {
             responseType: 'arraybuffer'
         });
 
+        console.log('@@@@@@@');
+        console.log(response);
+        console.log('@@@@@@@');
+
         // TOTO: take relevant proposal according to model
 
         const content = response.data;
+        console.log('@@@@@@@');
+        console.log(content);
+        console.log('@@@@@@@');
         let zip = await JSZip.loadAsync(content);
 
         if (model === "VayomarGPT") {
