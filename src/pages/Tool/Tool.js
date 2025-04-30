@@ -25,18 +25,12 @@ import {
     TextField,
     Button,
     Chip,
-    Popover,
     Divider,
     Badge,
-    LinearProgress,
     Backdrop,
     GlobalStyles,
-    IconButton,
 } from '@mui/material';
 import {
-    Menu as MenuIcon,
-    ChevronLeft as ChevronLeftIcon,
-    AddCircleOutline as AddCircleOutlineIcon,
     Add as AddIcon,
     Close as CloseIcon,
 } from '@mui/icons-material';
@@ -44,8 +38,8 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import CompanyAutocompleteInput from '../../components/CompanyAutocompleteInput';
 import GenerateProposalButton from '../../components/GenerateProposalButton';
-import marketingTheme, { darkTheme, drawerWidth, theme, globalStyles } from '../../themes/themes';
-import FetchCompaniesXLSXData from '../../data/companies/FetchCompaniesXLSXData';
+import { darkTheme, drawerWidth, theme, globalStyles } from '../../themes/themes';
+// import FetchCompaniesXLSXData from '../../data/companies/FetchCompaniesXLSXData';
 import ProgramStructureAutocomplete from '../../components/ProgramStructureAutocomplete';
 import MethodologiesAutocomplete from '../../components/MethodologiesAutocomplete';
 import FloatingButton from '../../components/FloatingButton';
@@ -58,17 +52,15 @@ import DownloadSRTFileButton from '../../components/DownloadSRTFileButton';
 import NotificationCenterPopover from '../../components/NotificationCenterPopover';
 import NewVersionPopover from '../../components/NewVersionPopover';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { signOut, fetchUserAttributes, fetchAuthSession } from 'aws-amplify/auth';
+import { signOut } from 'aws-amplify/auth';
 import { useNavigate } from 'react-router-dom';
 import ManageHistoryOutlinedIcon from '@mui/icons-material/ManageHistoryOutlined';
-import ThumbUpAltOutlinedIcon from '@mui/icons-material/ThumbUpAltOutlined';
 import ModelSelector from './ModelSelector';
 
 
 const CURRENT_VERSION = "1.1.14";
 
 function Tool() {
-    const [open, setOpen] = useState(true);
     const [currentTheme, setCurrentTheme] = useState('light');
     const [customersRows, setCustomersRows] = useState([]);
     const [pricingRows, setPricingRows] = useState([]);
@@ -85,14 +77,12 @@ function Tool() {
     const [isMP3Uploaded, setIsMP3Uploaded] = useState(false);
     const [isTranscriptionDone, setIsTranscriptionDone] = useState(false);
     const [mp3File, setMp3File] = useState(null);
-    // const [uploadProgress, setUploadProgress] = useState(0); // DONT DELETE
-    // const [transcriptionProgress, setTranscriptionProgress] = useState(0); // DONT DELETE
     const [isInsightsJsonExists, setIsInsightsJsonExists] = useState(false);
     const mp3Ref = useRef(null);
     const [insights, setInsights] = useState(null);
     const [outputFile, setOutputFile] = useState(null);
     const [isPPTXDownloaded, setIsPPTXDownloaded] = useState(false);
-    const [desiredOutcomesOpening, setDesiredOutcomesOpening] = useState(''); // GUY, you can take desiredOutcomesOpening value. (comment written by Tal)
+    const [desiredOutcomesOpening, setDesiredOutcomesOpening] = useState('');
     const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
 
     const [languageDialogOpen, setLanguageDialogOpen] = useState(false);
@@ -134,6 +124,9 @@ function Tool() {
         setDesiredOutcomesOpening(value);
     };
 
+    const open = true;
+    const availableModels = ['VayomarGPT'];
+
     // ------ EDIT COMPANY STATES -----
 
     const [showEditCompany, setShowEditCompany] = useState(false);
@@ -156,8 +149,6 @@ function Tool() {
     const [newVersionPopoverAnchorEl, setNewVersionPopoverAnchorEl] = useState(null);
     const [isNotificationsBadgeInvisible, setIsNotificationsBadgeInvisible] = useState(true);
     const [model, setModel] = useState('VayomarGPT');
-    const allModels = ['VayomarGPT'];
-    const [availableModels, setAvailableModels] = useState(['VayomarGPT']);
     // const [showModelPopover, setShowModelPopover] = useState(null);
 
     // ---------------------------------
@@ -166,43 +157,30 @@ function Tool() {
         <Typography ref={ref} {...props} />
     ));
 
-    // useEffect(() => {
-    //     const fetchUserGroups = async () => {
-    //         fetchAuthSession()
-    //             .then((session) => {
-    //                 if (session) {
-
-    //                     let userGroups = session.tokens.accessToken.payload["cognito:groups"] || [];
-    //                     if (userGroups?.length > 0) {
-    //                         if (userGroups.includes('Admins')) {
-    //                             setAvailableModels(allModels);
-    //                             setModel("VayomarGPT");
-    //                         } else if (userGroups.includes('VayomarGPT')) {
-    //                             setAvailableModels(['VayomarGPT', 'GenesisGPT']);
-    //                             setModel("VayomarGPT");
-    //                         } else {
-    //                             setAvailableModels(['GenesisGPT']);
-    //                         }
-    //                     } else {
-    //                         setAvailableModels(['GenesisGPT']);
-    //                     }
-    //                 }
-    //             })
-    //             .catch((error) => {
-    //                 console.error("error ", error)
-    //             });
-    //     };
-
-    //     fetchUserGroups();
-
-    // }, []);
-
 
     useEffect(() => {
         const fetchCompanies = async () => {
             try {
-                const results = await FetchCompaniesXLSXData(model);
-                setFetchedCompanyOptions(results); // Set the state with the fetched results
+                const response = await fetch('https://proposal-tool-companies.s3.us-east-1.amazonaws.com/companyData.json');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch company data');
+                }
+                const data = await response.json();
+                
+                // Transform the data to match the expected format in the application
+                const formattedData = data.map((company, index) => ({
+                    id: index + 1,
+                    name: company.name,
+                    image: `https://proposal-tool-companies.s3.us-east-1.amazonaws.com/logos/${company.logo}`,
+                    referents: company.contacts.map((contact, contactIndex) => ({
+                        id: contactIndex + 1,
+                        name: contact.fullName,
+                        position: contact.position,
+                        email: contact.email
+                    }))
+                }));
+                
+                setFetchedCompanyOptions(formattedData);
             } catch (err) {
                 console.error("Error fetching companies", err);
             }
@@ -354,9 +332,10 @@ function Tool() {
 
     // ------ END ADD NEW COMPANY ------
 
-    const toggleDrawer = () => {
-        setOpen(!open);
-    };
+    // Not currently used but might be needed in the future
+    // const toggleDrawer = () => {
+    //     setOpen(!open);
+    // };
 
     const toggleTheme = () => {
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -625,7 +604,7 @@ function Tool() {
                         <List>
                             <ListItem button selected>
                                 <ListItemIcon sx={{ minWidth: 0, mr: 2 }}>
-                                    <AddCircleOutlineIcon
+                                    <AddIcon
                                         sx={{
                                             color: currentTheme === 'light' ? '#424242' : '#B0BEC5', // Conditional color
                                             fontSize: 20, // Reduced Icon Size from 24 to 20
@@ -785,7 +764,7 @@ function Tool() {
                     <Toolbar />
                     <Container maxWidth="lg" sx={{ mt: 6, mb: 7 }}>
                         <Typography variant="h5" sx={{ mb: { xs: 3, md: 5 } }}>
-                            Hi, Welcome back 1 👋
+                            Hi, Welcome back 👋
                         </Typography>
                         <Grid container spacing={3}>
                             <Grid item xs={12}>
@@ -980,9 +959,6 @@ function Tool() {
                                             </Button>
                                         </label>
                                         <Box mt={2} sx={{ display: 'flex', justifyContent: 'center' }}>
-                                            {/* <Typography variant="body1">
-                                                        {editedCompanyImage ? "Current image" : showAddCompany ? "Upload new image" : "Select a company"}
-                                                    </Typography> */}
                                             {(editedCompanyImagePreview || addedCompanyImagePreview) && (
                                                 <Box mt={4}>
                                                     {(
@@ -1020,7 +996,7 @@ function Tool() {
                                         setCustomersSelectedRows={setCustomersSelectedRows}
                                     />
 
-                                    {model == "GenesisGPT" && (
+                                    {model === "GenesisGPT" && (
                                         <>
                                             <Typography variant="h6" gutterBottom sx={{ mb: 2, mt: 8 }}>
                                                 Your Full Name
@@ -1064,7 +1040,7 @@ function Tool() {
                                         </>
                                     )}
 
-                                    {model == "VayomarGPT" && (
+                                    {model === "VayomarGPT" && (
                                         <>
                                             <Typography variant="h6" gutterBottom sx={{ mb: 2, mt: 8 }}>
                                                 Desired Outcomes Opening
@@ -1081,7 +1057,7 @@ function Tool() {
                                     <ProgramStructureAutocomplete model={model} onChange={handleProgramStructureChange} />
 
 
-                                    {model == "VayomarGPT" && (
+                                    {model === "VayomarGPT" && (
                                         <>
                                             <Typography variant="h6" gutterBottom sx={{ mb: 2, mt: 4 }}>
                                                 Choose Methodologies
