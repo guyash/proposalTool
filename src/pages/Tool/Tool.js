@@ -785,7 +785,7 @@ function Tool() {
                     <Toolbar />
                     <Container maxWidth="lg" sx={{ mt: 6, mb: 7 }}>
                         <Typography variant="h5" sx={{ mb: { xs: 3, md: 5 } }}>
-                            Hi, Welcome back 👋
+                            Hi, Welcome back 1 👋
                         </Typography>
                         <Grid container spacing={3}>
                             <Grid item xs={12}>
