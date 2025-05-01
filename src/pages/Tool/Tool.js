@@ -27,7 +27,6 @@ import {
     Chip,
     Divider,
     Badge,
-    Backdrop,
     GlobalStyles,
     Dialog,
     DialogTitle,
@@ -56,7 +55,6 @@ import MP3LangDialog from '../../components/MP3LangDialog';
 import VersionDialog from '../../components/VersionDialog';
 import DownloadSRTFileButton from '../../components/DownloadSRTFileButton';
 import NotificationCenterPopover from '../../components/NotificationCenterPopover';
-import NewVersionPopover from '../../components/NewVersionPopover';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { signOut } from 'aws-amplify/auth';
 import { useNavigate } from 'react-router-dom';
@@ -163,7 +161,6 @@ function Tool() {
     const [addedCompanyImageFile, setAddedCompanyImageFile] = useState(null);
     const placeholderImageUrl = '/assets/companies/companyLogoPlaceholder.png';
     const [notificationsPopoverAnchorEl, setNotificationsPopoverAnchorEl] = useState(null);
-    const [newVersionPopoverAnchorEl, setNewVersionPopoverAnchorEl] = useState(null);
     const [isNotificationsBadgeInvisible, setIsNotificationsBadgeInvisible] = useState(true);
     const [model, setModel] = useState('VayomarGPT');
     // const [showModelPopover, setShowModelPopover] = useState(null);
@@ -187,7 +184,7 @@ function Tool() {
         } else {
             setOriginalCompanyData(null);
         }
-    }, [company]);
+    }, [company, fetchedCompanyOptions]);
 
     // -----------------------
     // SAVE FOR FUTURE USE LOGIC
@@ -222,15 +219,6 @@ function Tool() {
     // Helper function to determine if an image URL is a local placeholder
     const isLocalPlaceholderImage = (imageUrl) => {
         return imageUrl && (imageUrl.startsWith('/assets/') || imageUrl.startsWith('../assets/'));
-    };
-
-    // Helper function to get logo path safely
-    const getLogoPath = (company) => {
-        if (!company?.image) return null;
-        if (isLocalPlaceholderImage(company.image)) {
-            return company.image; // Return local path as is
-        }
-        return company.image; // Return S3 URL as is
     };
 
     // Helper to prepare logo filename for JSON
@@ -659,14 +647,8 @@ function Tool() {
         if (currentVersionStorage === CURRENT_VERSION) {
             setIsNotificationsBadgeInvisible(true);
         } else {
-            const notificationsCenterButton = document.getElementById("notifications-center-button");
-            if (notificationsCenterButton) {
-                setNewVersionPopoverAnchorEl(notificationsCenterButton);
-            }
             setIsNotificationsBadgeInvisible(false);
         }
-
-
     }, []);
 
     const handleProposalTitleChange = (event) => {
@@ -703,28 +685,11 @@ function Tool() {
         setNotificationsPopoverAnchorEl(null);
     };
 
-    const handleNewVersionPopoverClose = () => {
-        setNewVersionPopoverAnchorEl(null);
-    };
-
     const openNotificationsCenter = Boolean(notificationsPopoverAnchorEl);
     const notificationsCenterPopoverID = open ? 'notifications-popover' : undefined;
 
-    const openNewVersionPopover = Boolean(newVersionPopoverAnchorEl);
-    const newVersionPopoverID = open ? 'new-version-popover' : undefined;
-
-
     return (
         <ThemeProvider theme={currentTheme === 'light' ? theme : darkTheme}>
-
-            {openNewVersionPopover &&
-                (<Backdrop
-                    sx={(theme) => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })}
-                    open={openNewVersionPopover}
-                    onClick={handleNewVersionPopoverClose}
-                />)
-            }
-
             <Box sx={{ display: 'flex' }}>
                 <GlobalStyles styles={globalStyles} />
                 <CssBaseline />
@@ -800,15 +765,6 @@ function Tool() {
                             anchorEl={notificationsPopoverAnchorEl}
                             onClose={handleNotificationsIconClose}
                         />
-                        <NewVersionPopover
-                            versionText={CURRENT_VERSION}
-                            currentTheme={currentTheme}
-                            id={newVersionPopoverID}
-                            open={openNewVersionPopover}
-                            anchorEl={newVersionPopoverAnchorEl}
-                            onClose={handleNewVersionPopoverClose}
-                        />
-
                     </Toolbar>
                     {/* {isMP3Uploading || isMP3Transcribing ? <LinearProgress /> : <></>} */}
                 </AppBar>
