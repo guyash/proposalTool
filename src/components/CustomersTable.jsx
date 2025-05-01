@@ -98,7 +98,26 @@ const CustomersTable = ({ fetchedCompanyOptions, setFetchedCompanyOptions, compa
     };
 
     const handleDeleteClick = (id) => () => {
-        setCustomersRows(customersRows.filter((row) => row.id !== id));
+        const updatedRows = customersRows.filter((row) => row.id !== id);
+        setCustomersRows(updatedRows);
+        
+        // Update company object to reflect the deleted recipient
+        if (company) {
+            const updatedCompany = {
+                ...company,
+                referents: updatedRows
+            };
+            
+            // Update company in parent component
+            setCompany(updatedCompany);
+            
+            // Update in fetchedCompanyOptions
+            setFetchedCompanyOptions(prevOptions => 
+                prevOptions.map(comp => 
+                    comp.id === company.id ? updatedCompany : comp
+                )
+            );
+        }
     };
 
     const handleCancelClick = (id) => () => {

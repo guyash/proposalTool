@@ -29,10 +29,16 @@ import {
     Badge,
     Backdrop,
     GlobalStyles,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
 } from '@mui/material';
 import {
     Add as AddIcon,
     Close as CloseIcon,
+    Delete as DeleteIcon,
 } from '@mui/icons-material';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
@@ -56,9 +62,14 @@ import { signOut } from 'aws-amplify/auth';
 import { useNavigate } from 'react-router-dom';
 import ManageHistoryOutlinedIcon from '@mui/icons-material/ManageHistoryOutlined';
 import ModelSelector from './ModelSelector';
+import { uploadData, downloadData, remove } from 'aws-amplify/storage';
 
 
 const CURRENT_VERSION = "1.1.14";
+const S3_BUCKET_CONFIG = {
+    bucketName: 'proposal-tool-companies',
+    region: 'us-east-1'
+};
 
 function Tool() {
     const [currentTheme, setCurrentTheme] = useState('light');
@@ -92,6 +103,8 @@ function Tool() {
     const [isMP3Transcribing, setIsMP3Transcribing] = useState(false);
     const [isSaveButtonIsHovered, setIsSaveButtonIsHovered] = useState(false);
     const [versionDialogOpen, setVersionDialogOpen] = useState(false);
+
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     const handleVersionDialogOpen = () => setVersionDialogOpen(true);
     const handleVersionDialogClose = () => setVersionDialogOpen(false);
@@ -132,6 +145,7 @@ function Tool() {
     const [showEditCompany, setShowEditCompany] = useState(false);
     const [editedCompanyName, setEditedCompanyName] = useState('');
     const [editedCompanyImagePreview, setEditedCompanyImagePreview] = useState('');
+    const [editedCompanyImageFile, setEditedCompanyImageFile] = useState(null);
 
     const editCompanyNameTextfieldRef = useRef(null);
     const addedCompanyNameTextfieldRef = useRef(null);
@@ -144,7 +158,8 @@ function Tool() {
     const [addedCompanyName, setAddedCompanyName] = useState('');
     const [addedCompanyImage, setAddedCompanyImage] = useState('');
     const [addedCompanyImagePreview, setAddedCompanyImagePreview] = useState('');
-    const placeholderImageUrl = '../assets/companies/companyLogoPlaceholder.png';
+    const [addedCompanyImageFile, setAddedCompanyImageFile] = useState(null);
+    const placeholderImageUrl = '/assets/companies/companyLogoPlaceholder.png';
     const [notificationsPopoverAnchorEl, setNotificationsPopoverAnchorEl] = useState(null);
     const [newVersionPopoverAnchorEl, setNewVersionPopoverAnchorEl] = useState(null);
     const [isNotificationsBadgeInvisible, setIsNotificationsBadgeInvisible] = useState(true);
@@ -152,6 +167,190 @@ function Tool() {
     // const [showModelPopover, setShowModelPopover] = useState(null);
 
     // ---------------------------------
+
+    // Keep track of the original company data (before any local edits)
+    const [originalCompanyData, setOriginalCompanyData] = useState(null);
+
+    // Update originalCompanyData whenever the user selects a company from the pre-populated list
+    useEffect(() => {
+        if (company) {
+            const isFromPrePopulatedList = fetchedCompanyOptions.some((opt) => opt.id === company.id);
+            if (isFromPrePopulatedList) {
+                // Deep clone to avoid reference issues
+                setOriginalCompanyData(JSON.parse(JSON.stringify(company)));
+            } else {
+                // Newly added company, there is no original data
+                setOriginalCompanyData(null);
+            }
+        } else {
+            setOriginalCompanyData(null);
+        }
+    }, [company]);
+
+    // -----------------------
+    // SAVE FOR FUTURE USE LOGIC
+    // -----------------------
+
+    const uploadLogoIfNeeded = async () => {
+        // Decide which (if any) file should be uploaded
+        const fileToUpload = editedCompanyImageFile || addedCompanyImageFile;
+        if (!fileToUpload) return { logoFileName: null, fullImageUrl: null };
+
+        // Prefix filename to avoid collisions
+        const logoFileName = `${Date.now()}_${fileToUpload.name}`;
+        const key = `logos/${logoFileName}`;
+
+        try {
+            await uploadData({
+                path: key,
+                data: fileToUpload,
+                options: {
+                    contentType: fileToUpload.type || 'image/*',
+                    bucket: S3_BUCKET_CONFIG,
+                },
+            }).result;
+            const fullImageUrl = `https://proposal-tool-companies.s3.us-east-1.amazonaws.com/${key}`;
+            return { logoFileName, fullImageUrl };
+        } catch (error) {
+            console.error('Error uploading logo to S3', error);
+            return { logoFileName: null, fullImageUrl: null };
+        }
+    };
+
+    // Helper function to determine if an image URL is a local placeholder
+    const isLocalPlaceholderImage = (imageUrl) => {
+        return imageUrl && (imageUrl.startsWith('/assets/') || imageUrl.startsWith('../assets/'));
+    };
+
+    // Helper function to get logo path safely
+    const getLogoPath = (company) => {
+        if (!company?.image) return null;
+        if (isLocalPlaceholderImage(company.image)) {
+            return company.image; // Return local path as is
+        }
+        return company.image; // Return S3 URL as is
+    };
+
+    // Helper to prepare logo filename for JSON
+    const getLogoFilenameForJson = (imageUrl) => {
+        if (!imageUrl || isLocalPlaceholderImage(imageUrl)) {
+            return ''; // Empty string for placeholder
+        }
+        // Extract filename from S3 URL
+        return imageUrl.replace('https://proposal-tool-companies.s3.us-east-1.amazonaws.com/logos/', '');
+    };
+
+    const contactsFromReferents = (referentsArray) =>
+        referentsArray.map((r) => ({ fullName: r.name, position: r.position, email: r.email }));
+
+    const isSameContacts = (a, b) => {
+        if (a.length !== b.length) return false;
+        const sortFn = (x, y) => (x.fullName > y.fullName ? 1 : -1);
+        const aSorted = [...a].sort(sortFn);
+        const bSorted = [...b].sort(sortFn);
+        return JSON.stringify(aSorted) === JSON.stringify(bSorted);
+    };
+
+    const handleSaveForFutureUse = async () => {
+        try {
+            if (!company) return; // Nothing to save
+
+            // Fetch the latest JSON from S3 bucket
+            const key = 'companyData.json';
+            const downloadRes = await downloadData({ path: key, options: { bucket: S3_BUCKET_CONFIG } }).result;
+            const jsonText = await downloadRes.body.text();
+            let companiesJson = [];
+            try {
+                companiesJson = JSON.parse(jsonText);
+            } catch (e) {
+                console.error('Could not parse companyData.json', e);
+                return;
+            }
+
+            // Helper to build JSON-company from local state
+            const buildJsonCompany = (comp, logoFileNameOverride = null) => ({
+                id: comp.id, // Preserve ID
+                name: comp.name,
+                logo: logoFileNameOverride || getLogoFilenameForJson(comp.image),
+                contacts: contactsFromReferents(comp.referents || []),
+            });
+
+            // Find by ID first (for editing), fall back to name matching
+            const existingIndex = originalCompanyData 
+                ? companiesJson.findIndex(c => c.id === originalCompanyData.id) // Try to match by ID
+                : companiesJson.findIndex(c => c.name === company.name); // Fallback to name matching
+
+            const currentContacts = contactsFromReferents(company.referents || []);
+            const existingJsonEntry = existingIndex !== -1 ? companiesJson[existingIndex] : null;
+
+            const hasNameChanged = existingJsonEntry && existingJsonEntry.name !== company.name;
+            const hasLogoChanged = !!(editedCompanyImageFile || addedCompanyImageFile);
+            const hasContactsChanged = existingJsonEntry ? !isSameContacts(existingJsonEntry.contacts, currentContacts) : true;
+
+            if (existingJsonEntry && !hasNameChanged && !hasLogoChanged && !hasContactsChanged) {
+                // No changes – nothing to do
+                console.log('No changes detected – skipping save');
+                return;
+            }
+
+            // Upload logo if needed
+            let logoInfo = { logoFileName: null, fullImageUrl: null };
+            if (hasLogoChanged) {
+                logoInfo = await uploadLogoIfNeeded();
+                if (logoInfo.fullImageUrl) {
+                    // Update local state image so UI reflects uploaded file with permanent URL
+                    setCompany((prev) => ({ ...prev, image: logoInfo.fullImageUrl }));
+                }
+            }
+
+            // Create updated company JSON with preserved ID or new ID
+            const updatedJsonCompany = buildJsonCompany(company, logoInfo.logoFileName);
+            
+            if (!updatedJsonCompany.id && !existingJsonEntry) {
+                // New company needs a new ID
+                updatedJsonCompany.id = companiesJson.length > 0 
+                    ? Math.max(...companiesJson.map(c => c.id || 0)) + 1 
+                    : 1;
+            }
+
+            if (existingJsonEntry) {
+                // Update existing entry
+                companiesJson[existingIndex] = updatedJsonCompany;
+            } else {
+                // New company – push
+                companiesJson.push(updatedJsonCompany);
+            }
+
+            // Persist back to S3
+            const jsonBlob = new Blob([JSON.stringify(companiesJson, null, 2)], { type: 'application/json' });
+            await uploadData({
+                path: key,
+                data: jsonBlob,
+                options: {
+                    contentType: 'application/json',
+                    bucket: S3_BUCKET_CONFIG,
+                },
+            }).result;
+
+            // Optionally update local state so the newly added/updated company appears immediately
+            const updatedOptionsFormatted = companiesJson.map((c) => ({
+                id: c.id,
+                name: c.name,
+                image: c.logo ? `https://proposal-tool-companies.s3.us-east-1.amazonaws.com/logos/${c.logo}` : placeholderImageUrl,
+                referents: c.contacts.map((ct, ctIdx) => ({
+                    id: ctIdx + 1,
+                    name: ct.fullName,
+                    position: ct.position,
+                    email: ct.email,
+                })),
+            }));
+            setFetchedCompanyOptions(updatedOptionsFormatted);
+
+            console.log('Company saved/updated successfully');
+        } catch (error) {
+            console.error('Error saving company for future use', error);
+        }
+    };
 
     const ForwardedTypography = forwardRef((props, ref) => (
         <Typography ref={ref} {...props} />
@@ -171,7 +370,7 @@ function Tool() {
                 const formattedData = data.map((company, index) => ({
                     id: index + 1,
                     name: company.name,
-                    image: `https://proposal-tool-companies.s3.us-east-1.amazonaws.com/logos/${company.logo}`,
+                    image: company.logo ? `https://proposal-tool-companies.s3.us-east-1.amazonaws.com/logos/${company.logo}` : placeholderImageUrl,
                     referents: company.contacts.map((contact, contactIndex) => ({
                         id: contactIndex + 1,
                         name: contact.fullName,
@@ -201,8 +400,8 @@ function Tool() {
     };
 
     const handleEditCompanyImageUpload = (event) => {
-
         const file = event.target.files[0];
+        setEditedCompanyImageFile(file || null);
         if (file) {
             const imageUrl = URL.createObjectURL(file);
             const reader = new FileReader();
@@ -279,8 +478,8 @@ function Tool() {
     };
 
     const handleAddedCompanyImageUpload = (event) => {
-
         const file = event.target.files[0];
+        setAddedCompanyImageFile(file || null);
         if (file) {
             const imageUrl = URL.createObjectURL(file);
             setAddedCompanyImage(imageUrl);
@@ -331,6 +530,83 @@ function Tool() {
     }, [showAddCompany]);
 
     // ------ END ADD NEW COMPANY ------
+
+    // ------ DELETE COMPANY ------
+    const handleDeleteCompany = async () => {
+        if (!company) return;
+        
+        try {
+            // Fetch the latest JSON from S3 bucket
+            const key = 'companyData.json';
+            const downloadRes = await downloadData({ path: key, options: { bucket: S3_BUCKET_CONFIG } }).result;
+            const jsonText = await downloadRes.body.text();
+            let companiesJson = [];
+            try {
+                companiesJson = JSON.parse(jsonText);
+            } catch (e) {
+                console.error('Could not parse companyData.json', e);
+                return;
+            }
+            
+            // Find and remove the company
+            const companyIndex = companiesJson.findIndex(c => c.id === company.id);
+            if (companyIndex === -1) {
+                console.error('Company not found in JSON file');
+                return;
+            }
+            
+            // Get logo filename before removing company
+            const companyToDelete = companiesJson[companyIndex];
+            const logoFilename = companyToDelete.logo;
+            
+            // Remove company from array
+            companiesJson.splice(companyIndex, 1);
+            
+            // Upload updated JSON to S3
+            const jsonBlob = new Blob([JSON.stringify(companiesJson, null, 2)], { type: 'application/json' });
+            await uploadData({
+                path: key,
+                data: jsonBlob,
+                options: {
+                    contentType: 'application/json',
+                    bucket: S3_BUCKET_CONFIG,
+                },
+            }).result;
+            
+            // Delete logo file from S3 if it exists
+            if (logoFilename) {
+                try {
+                    await remove({ 
+                        path: `logos/${logoFilename}`,
+                        options: { bucket: S3_BUCKET_CONFIG }
+                    });
+                    console.log(`Deleted logo file: ${logoFilename}`);
+                } catch (logoError) {
+                    // Don't fail the whole operation if logo deletion fails
+                    console.warn(`Could not delete logo file: ${logoFilename}`, logoError);
+                }
+            }
+            
+            // Update local state
+            const updatedOptions = fetchedCompanyOptions.filter(c => c.id !== company.id);
+            setFetchedCompanyOptions(updatedOptions);
+            setCompany(null); // Clear selected company
+            setDeleteConfirmOpen(false);
+            
+            console.log('Company deleted successfully');
+        } catch (error) {
+            console.error('Error deleting company', error);
+        }
+    };
+    
+    const handleDeleteConfirmOpen = () => {
+        setDeleteConfirmOpen(true);
+    };
+    
+    const handleDeleteConfirmClose = () => {
+        setDeleteConfirmOpen(false);
+    };
+    // ------ END DELETE COMPANY ------
 
     // Not currently used but might be needed in the future
     // const toggleDrawer = () => {
@@ -785,9 +1061,30 @@ function Tool() {
 
                                     <VersionDialog currentTheme={currentTheme} open={versionDialogOpen} onClose={handleVersionDialogClose} />
 
-                                    {/* <Typography variant="h4" gutterBottom sx={{ mb: 10 }}>
-                                        Generate New Proposal
-                                    </Typography> */}
+                                    {/* Delete Confirmation Dialog */}
+                                    <Box sx={{ position: 'absolute' }}>
+                                        <Dialog
+                                            open={deleteConfirmOpen}
+                                            onClose={handleDeleteConfirmClose}
+                                            aria-labelledby="delete-dialog-title"
+                                            aria-describedby="delete-dialog-description"
+                                        >
+                                            <DialogTitle id="delete-dialog-title">
+                                                {"Delete Company"}
+                                            </DialogTitle>
+                                            <DialogContent>
+                                                <DialogContentText id="delete-dialog-description">
+                                                    Are you sure you want to delete {company?.name}? This action cannot be undone.
+                                                </DialogContentText>
+                                            </DialogContent>
+                                            <DialogActions>
+                                                <Button onClick={handleDeleteConfirmClose}>Cancel</Button>
+                                                <Button onClick={handleDeleteCompany} color="error" autoFocus>
+                                                    Delete
+                                                </Button>
+                                            </DialogActions>
+                                        </Dialog>
+                                    </Box>
 
                                     <ForwardedTypography
                                         ref={mp3Ref}
@@ -854,8 +1151,8 @@ function Tool() {
                                         Customer's Company
                                     </Typography>
 
-                                    <Grid container spacing={1}>
-                                        <Grid item xs={10}>
+                                    <Grid container spacing={1} alignItems="flex-start">
+                                        <Grid item xs={8}>
 
                                             {showEditCompany || showAddCompany ?
                                                 <TextField
@@ -872,13 +1169,13 @@ function Tool() {
                                                     inputRef={showEditCompany ? editCompanyNameTextfieldRef : addedCompanyNameTextfieldRef}
                                                     value={showEditCompany ? editedCompanyName : addedCompanyName}
                                                     onChange={showEditCompany ? handleEditCompanyNameChange : handleAddedCompanyNameChange}
-                                                    sx={{ mb: 1 }}
+                                                    sx={{ height: '55px' }}
                                                 />
                                                 : <CompanyAutocompleteInput company={company} setCompany={setCompany} fetchedCompanyOptions={fetchedCompanyOptions} />}
 
                                         </Grid>
 
-                                        <Grid item xs={1} sx={{ display: 'flex', justifyContent: 'center' }}>
+                                        <Grid item xs={1.33} sx={{ display: 'flex', justifyContent: 'center', mt: '0px' }}>
                                             <Button
                                                 variant={showAddCompany ? "contained" : "outlined"}
                                                 color="primary"
@@ -895,14 +1192,14 @@ function Tool() {
                                                     }
                                                 }
                                                 }
-                                                sx={{ height: '55px', width: '100px' }}
+                                                sx={{ height: '55px', width: '95px' }}
                                                 startIcon={showAddCompany ? <SaveIcon /> : showEditCompany ? <CloseIcon /> : <AddIcon />}
                                             >
                                                 {showAddCompany ? 'SAVE' : showEditCompany ? 'EXIT' : 'ADD'}
 
                                             </Button>
                                         </Grid>
-                                        <Grid item xs={1} sx={{ display: 'flex', justifyContent: 'center' }}>
+                                        <Grid item xs={1.33} sx={{ display: 'flex', justifyContent: 'center', mt: '0px' }}>
 
                                             <Button
                                                 variant={showEditCompany ? "contained" : "outlined"}
@@ -920,81 +1217,108 @@ function Tool() {
                                                 }
 
                                                 }
-                                                sx={{ height: '55px', width: '100px' }}
+                                                sx={{ height: '55px', width: '95px' }}
                                                 disabled={!company?.name && !showEditCompany && !showAddCompany}
                                                 startIcon={showEditCompany ? <SaveIcon /> : showAddCompany ? <CloseIcon /> : <EditIcon />}
                                             >
                                                 {showEditCompany ? 'SAVE' : showAddCompany ? 'EXIT' : 'EDIT'}
                                             </Button>
                                         </Grid>
+                                        <Grid item xs={1.33} sx={{ display: 'flex', justifyContent: 'center', mt: '0px' }}>
+                                            <Button
+                                                variant="outlined"
+                                                color="error"
+                                                onClick={handleDeleteConfirmOpen}
+                                                sx={{ height: '55px', width: '95px' }}
+                                                disabled={!company?.name || showEditCompany || showAddCompany}
+                                                startIcon={<DeleteIcon />}
+                                            >
+                                                DELETE
+                                            </Button>
+                                        </Grid>
                                     </Grid>
 
-                                    <Box sx={{
-                                        border: '1px solid',
-                                        borderRadius: '4px',
-                                        padding: '16px',
-                                        display: 'inline-block',
-                                        minHeight: '200px',
-                                        width: '200px',
-                                        borderColor: currentTheme === 'light' ? '#ddd' : '#ffffff1f',
-                                        mt: 2,
-                                    }}>
-                                        <input
-                                            accept="image/*"
-                                            style={{ display: 'none' }}
-                                            id="edit-company-image"
-                                            type="file"
-                                            onChange={showAddCompany ? handleAddedCompanyImageUpload : handleEditCompanyImageUpload}
-                                        />
-                                        <label htmlFor="edit-company-image">
-                                            <Button
-                                                disabled={!company?.name && !showEditCompany && !showAddCompany}
-                                                startIcon={<CloudUploadIcon />}
-                                                variant="contained"
-                                                color="primary"
-                                                component="span"
-                                                sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}
-                                            >
-                                                {showAddCompany ? "ADD IMAGE" : "UPDATE IMAGE"}
-                                            </Button>
-                                        </label>
-                                        <Box mt={2} sx={{ display: 'flex', justifyContent: 'center' }}>
-                                            {(editedCompanyImagePreview || addedCompanyImagePreview) && (
-                                                <Box mt={4}>
-                                                    {(
-                                                        (showAddCompany && addedCompanyImagePreview) ||
-                                                        (!showAddCompany && editedCompanyImagePreview)
-                                                    ) && (
-                                                            <img
-                                                                alt='alt'
-                                                                src={showAddCompany ? addedCompanyImagePreview : editedCompanyImagePreview}
-                                                                style={{
-                                                                    maxWidth: '100%', maxHeight: '70px', minHeight: '70px',
-                                                                    display: 'block', margin: '0 auto',
-                                                                }}
-                                                            />
-                                                        )}
+                                    <Grid container spacing={3} sx={{ mt: 2 }}>
+                                        <Grid item xs={3}>
+                                            <Box sx={{
+                                                border: '1px solid',
+                                                borderRadius: '4px',
+                                                padding: '16px',
+                                                display: 'inline-block',
+                                                minHeight: '200px',
+                                                width: '100%',
+                                                borderColor: currentTheme === 'light' ? '#ddd' : '#ffffff1f',
+                                            }}>
+                                                <input
+                                                    accept="image/*"
+                                                    style={{ display: 'none' }}
+                                                    id="edit-company-image"
+                                                    type="file"
+                                                    onChange={showAddCompany ? handleAddedCompanyImageUpload : handleEditCompanyImageUpload}
+                                                />
+                                                <label htmlFor="edit-company-image">
+                                                    <Button
+                                                        disabled={!company?.name && !showEditCompany && !showAddCompany}
+                                                        startIcon={<CloudUploadIcon />}
+                                                        variant="contained"
+                                                        color="primary"
+                                                        component="span"
+                                                        sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}
+                                                    >
+                                                        {showAddCompany ? "ADD IMAGE" : "UPDATE IMAGE"}
+                                                    </Button>
+                                                </label>
+                                                <Box mt={2} sx={{ display: 'flex', justifyContent: 'center' }}>
+                                                    {(editedCompanyImagePreview || addedCompanyImagePreview) && (
+                                                        <Box mt={4}>
+                                                            {(
+                                                                (showAddCompany && addedCompanyImagePreview) ||
+                                                                (!showAddCompany && editedCompanyImagePreview)
+                                                            ) && (
+                                                                    <img
+                                                                        alt='alt'
+                                                                        src={showAddCompany ? addedCompanyImagePreview : editedCompanyImagePreview}
+                                                                        style={{
+                                                                            maxWidth: '100%', 
+                                                                            maxHeight: '70px',
+                                                                            objectFit: 'contain',
+                                                                            display: 'block', 
+                                                                            margin: '0 auto',
+                                                                        }}
+                                                                    />
+                                                                )}
+                                                        </Box>
+                                                    )}
                                                 </Box>
-                                            )}
-                                        </Box>
-                                    </Box>
+                                            </Box>
+                                        </Grid>
+                                        
+                                        <Grid item xs={9}>
 
+                                            <CustomersTable
+                                                fetchedCompanyOptions={fetchedCompanyOptions}
+                                                setFetchedCompanyOptions={setFetchedCompanyOptions}
+                                                company={company}
+                                                setCompany={setCompany}
+                                                customersRows={customersRows}
+                                                setCustomersRows={setCustomersRows}
+                                                customersSelectedRows={customersSelectedRows}
+                                                setCustomersSelectedRows={setCustomersSelectedRows}
+                                            />
+                                        </Grid>
+                                    </Grid>
 
-
-                                    <Typography variant="h6" gutterBottom sx={{ mb: 2, mt: 8 }}>
-                                        Customer Recipients
-                                    </Typography>
-
-                                    <CustomersTable
-                                        fetchedCompanyOptions={fetchedCompanyOptions}
-                                        setFetchedCompanyOptions={setFetchedCompanyOptions}
-                                        company={company}
-                                        setCompany={setCompany}
-                                        customersRows={customersRows}
-                                        setCustomersRows={setCustomersRows}
-                                        customersSelectedRows={customersSelectedRows}
-                                        setCustomersSelectedRows={setCustomersSelectedRows}
-                                    />
+                                    {/* Save for Future Use Button */}
+                                    <Grid container justifyContent="flex-end" sx={{ mt: 2 }}>
+                                        <Button
+                                            variant="contained"
+                                            color="primary"
+                                            disabled={!company}
+                                            onClick={handleSaveForFutureUse}
+                                        >
+                                            Save for future use
+                                        </Button>
+                                    </Grid>
 
                                     {model === "GenesisGPT" && (
                                         <>
