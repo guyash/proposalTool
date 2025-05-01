@@ -95,6 +95,8 @@ function Tool() {
     const [isPPTXDownloaded, setIsPPTXDownloaded] = useState(false);
     const [desiredOutcomesOpening, setDesiredOutcomesOpening] = useState('');
     const [selectedCurrency, setSelectedCurrency] = useState(currencies[0]);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     const [languageDialogOpen, setLanguageDialogOpen] = useState(false);
     const [selectedLanguage, setSelectedLanguage] = useState(null);
@@ -254,6 +256,8 @@ function Tool() {
     const handleSaveForFutureUse = async () => {
         try {
             if (!company) return; // Nothing to save
+            
+            setIsSaving(true); // Start saving animation
 
             // Fetch the latest JSON from S3 bucket
             const key = 'companyData.json';
@@ -264,8 +268,13 @@ function Tool() {
                 companiesJson = JSON.parse(jsonText);
             } catch (e) {
                 console.error('Could not parse companyData.json', e);
+                setIsSaving(false);
                 return;
             }
+
+            console.log('#########');
+            console.log(companiesJson);
+            console.log('#########');
 
             // Helper to build JSON-company from local state
             const buildJsonCompany = (comp, logoFileNameOverride = null) => ({
@@ -290,6 +299,9 @@ function Tool() {
             if (existingJsonEntry && !hasNameChanged && !hasLogoChanged && !hasContactsChanged) {
                 // No changes – nothing to do
                 console.log('No changes detected – skipping save');
+                setIsSaving(false);
+                setSaveSuccess(true); // Still show success feedback even if no changes
+                setTimeout(() => setSaveSuccess(false), 2000); // Hide after 2 seconds
                 return;
             }
 
@@ -347,8 +359,12 @@ function Tool() {
             setFetchedCompanyOptions(updatedOptionsFormatted);
 
             console.log('Company saved/updated successfully');
+            setIsSaving(false);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000); // Hide success message after 2 seconds
         } catch (error) {
             console.error('Error saving company for future use', error);
+            setIsSaving(false);
         }
     };
 
@@ -378,6 +394,10 @@ function Tool() {
                         email: contact.email
                     }))
                 }));
+
+                console.log('$$$$$$$$$');
+                console.log(formattedData);
+                console.log('$$$$$$$$$');
                 
                 setFetchedCompanyOptions(formattedData);
             } catch (err) {
@@ -1309,15 +1329,68 @@ function Tool() {
                                     </Grid>
 
                                     {/* Save for Future Use Button */}
-                                    <Grid container justifyContent="flex-end" sx={{ mt: 2 }}>
+                                    <Grid container justifyContent="flex-end" sx={{ mt: 2, position: 'relative' }}>
                                         <Button
                                             variant="contained"
                                             color="primary"
-                                            disabled={!company}
+                                            disabled={!company || isSaving}
                                             onClick={handleSaveForFutureUse}
+                                            sx={{
+                                                position: 'relative',
+                                                transition: 'all 0.3s',
+                                                ...(isSaving && {
+                                                    backgroundColor: '#ccc',
+                                                    color: '#666',
+                                                }),
+                                            }}
                                         >
-                                            Save for future use
+                                            {isSaving ? (
+                                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                    <Box
+                                                        sx={{
+                                                            width: 20,
+                                                            height: 20,
+                                                            border: '3px solid rgba(255, 255, 255, 0.3)',
+                                                            borderRadius: '50%',
+                                                            borderTopColor: '#fff',
+                                                            animation: 'spin 1s linear infinite',
+                                                            mr: 1,
+                                                            '@keyframes spin': {
+                                                                to: { transform: 'rotate(360deg)' }
+                                                            }
+                                                        }}
+                                                    />
+                                                    Saving...
+                                                </Box>
+                                            ) : saveSuccess ? 'Saved!' : 'Save for future use'}
                                         </Button>
+                                        {saveSuccess && (
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    top: -30,
+                                                    right: 0,
+                                                    p: 1,
+                                                    borderRadius: 1,
+                                                    bgcolor: 'success.light',
+                                                    color: 'white',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    animation: 'fadeIn 0.3s, fadeOut 0.3s 1.7s',
+                                                    '@keyframes fadeIn': {
+                                                        from: { opacity: 0, transform: 'translateY(10px)' },
+                                                        to: { opacity: 1, transform: 'translateY(0)' }
+                                                    },
+                                                    '@keyframes fadeOut': {
+                                                        from: { opacity: 1, transform: 'translateY(0)' },
+                                                        to: { opacity: 0, transform: 'translateY(-10px)' }
+                                                    }
+                                                }}
+                                            >
+                                                <Box component="span" sx={{ mr: 1 }}>✓</Box>
+                                                Company saved successfully!
+                                            </Box>
+                                        )}
                                     </Grid>
 
                                     {model === "GenesisGPT" && (
