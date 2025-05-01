@@ -226,6 +226,10 @@ export default async function proccessAndDownloadPPTX({
 
 }) {
     try {
+        console.log('@@@@@@@');
+        console.log(companyLogoPath);
+        console.log('@@@@@@@');
+
         const companyName = company ? company.name : "";
         const serializer = new XMLSerializer();
         const parser = new DOMParser();
@@ -279,7 +283,6 @@ export default async function proccessAndDownloadPPTX({
         const firstSlideDoc = parser.parseFromString(firstSlideXml, "application/xml");
 
         if (companyLogoPath !== '') {
-            console.log(companyLogoPath);
             await replaceImage(zip, companyLogoPath);
         }
 
@@ -585,6 +588,8 @@ export default async function proccessAndDownloadPPTX({
 
             replaceText(slideDoc, '<DESIRED_OUTCOMES>', desiredOutcomesWithIntro);
 
+            replaceText(slideDoc, '<ABN>', customersSelectedRows[0].name);
+            replaceText(slideDoc, '<ABT>', customersSelectedRows[0].position);
             replaceText(slideDoc, '<DATE>', getCurrentFormattedDate());
             replaceText(slideDoc, 'Signed on behalf of <COMPANY>', 'Signed on behalf of ' + companyName);
 
