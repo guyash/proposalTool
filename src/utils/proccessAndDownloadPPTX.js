@@ -72,14 +72,14 @@ function inspectTextboxPositions(slideDoc, index) {
             // Get the position information
             const xfrm = shape.getElementsByTagName('a:xfrm')[0];
             if (xfrm) {
-                const off = xfrm.getElementsByTagName('a:off')[0];
-                const ext = xfrm.getElementsByTagName('a:ext')[0];
+                // const off = xfrm.getElementsByTagName('a:off')[0];
+                // const ext = xfrm.getElementsByTagName('a:ext')[0];
 
-                if (off && ext) {
-                    const x = off.getAttribute('x');
-                    const y = off.getAttribute('y');
-                    const width = ext.getAttribute('cx');
-                    const height = ext.getAttribute('cy');
+                // if (off && ext) {
+                //     const x = off.getAttribute('x');
+                //     const y = off.getAttribute('y');
+                //     const width = ext.getAttribute('cx');
+                //     const height = ext.getAttribute('cy');
 
                     // console.log(`  Position: x=${x}, y=${y}`);
                     // console.log(`  Size: width=${width}, height=${height}`);
@@ -92,11 +92,11 @@ function inspectTextboxPositions(slideDoc, index) {
                     // console.log(`  // Move 100000 EMUs right and 50000 EMUs down`);
                     // console.log(`  off.setAttribute('x', '${parseInt(x) + 100000}');`);
                     // console.log(`  off.setAttribute('y', '${parseInt(y) + 50000}');`);
-                }
+                // }
             }
 
             // Show a preview of the text content
-            const textContent = textBox.textContent.trim().substring(0, 50);
+            // const textContent = textBox.textContent.trim().substring(0, 50);
             // console.log(`  Text preview: "${textContent}${textContent.length >= 50 ? '...' : ''}"`);
         }
     });
@@ -230,11 +230,7 @@ export default async function proccessAndDownloadPPTX({
         const serializer = new XMLSerializer();
         const parser = new DOMParser();
 
-        console.log('@@@@@@@');
-        console.log(model); //GUY1
-        console.log('@@@@@@@');
-
-        const modelTemplatePath = model == 'VayomarGPT' ? "/proposal_template.pptx" : "/proposal_template_genesis.pptx";
+        const modelTemplatePath = "/proposal_template.pptx";
 
         // proposal_template.pptx was uploaded to S3 because it wasn't found by amplify in the build itself
         // const modelTemplatePath = "https://proposal-tool-1.s3.us-east-1.amazonaws.com/dev_files/proposal_template.pptx";
@@ -244,21 +240,12 @@ export default async function proccessAndDownloadPPTX({
             responseType: 'arraybuffer'
         });
 
-        console.log('@@@@@@@');
-        console.log(response);
-        console.log('@@@@@@@');
-
         // TOTO: take relevant proposal according to model
 
         const content = response.data;
-        console.log('@@@@@@@');
-        console.log(content);
-        console.log('@@@@@@@');
         let zip = await JSZip.loadAsync(content);
 
-        if (model === "VayomarGPT") {
-            zip = await deleteSlides(zip, programStructure, methodology, model);
-        }
+        zip = await deleteSlides(zip, programStructure, methodology, model);
         const slideFiles = Object.keys(zip.files).filter(filename => filename.startsWith('ppt/slides/slide'));
         slideFiles.sort((a, b) => {
             const getNumber = filename => parseInt(filename.match(/slide(\d+)\.xml$/)[1], 10);
@@ -277,7 +264,7 @@ export default async function proccessAndDownloadPPTX({
                 const imageBuffer = await imageResponse.arrayBuffer();
 
                 // Replace image with "rId6"
-                let modelImage = model == "VayomarGPT" ? "image4.png" : "image3.png";
+                let modelImage = "image4.png";
                 zip.file(`ppt/media/${modelImage}`, imageBuffer); // This is the placeholder file name
                 zip.file(`ppt/media/image${imageId}.png`, imageBuffer); // Use imageId to replace the actual image
 
@@ -595,17 +582,10 @@ export default async function proccessAndDownloadPPTX({
             replaceText(slideDoc, '<PROGRAM_STRUCTURE>', insights.program_structures_refined);
             replaceText(slideDoc, '<BACKGROUND>', insights.background_section);
 
-            if (model == "VayomarGPT") {
-                replaceText(slideDoc, '<DESIRED_OUTCOMES>', desiredOutcomesWithIntro);
-            }
+            replaceText(slideDoc, '<DESIRED_OUTCOMES>', desiredOutcomesWithIntro);
+
             replaceText(slideDoc, '<DATE>', getCurrentFormattedDate());
             replaceText(slideDoc, 'Signed on behalf of <COMPANY>', 'Signed on behalf of ' + companyName);
-
-            if (model == "GenesisGPT") {
-                replaceText(slideDoc, '<USER_NAME>', userName || "");
-                replaceText(slideDoc, '<USER_ROLE>', userRole || "");
-                replaceText(slideDoc, 'Signed on behalf of <USER_COMPANY>', 'Signed on behalf of ' + userCompany || "");
-            }
 
             customersSelectedRows = customersSelectedRows.slice(0, 3);
 
@@ -704,12 +684,8 @@ export default async function proccessAndDownloadPPTX({
 
                 try {
                     inspectTextboxPositions(slideDoc, index);
-                    const modelIndices = {
-                        VayomarGPT: 16,
-                        GenesisGPT: 15
-                    };
                     
-                    const shape = slideDoc.getElementsByTagName('p:sp')[modelIndices[model]];
+                    const shape = slideDoc.getElementsByTagName('p:sp')[16];
                     
                     const xfrm = shape.getElementsByTagName('a:xfrm')[0];
                     const off = xfrm.getElementsByTagName('a:off')[0];
