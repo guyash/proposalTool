@@ -253,7 +253,7 @@ export default async function proccessAndDownloadPPTX({
         });
 
 
-        const replaceImage = async (zip, imageId, companyLogoPath) => {
+        const replaceImage = async (zip, companyLogoPath) => {
             try {
                 const imageResponse = await fetch(companyLogoPath);
                 if (!imageResponse.ok) {
@@ -263,10 +263,10 @@ export default async function proccessAndDownloadPPTX({
                 // Convert the image to an array buffer
                 const imageBuffer = await imageResponse.arrayBuffer();
 
-                // Replace image with "rId6"
-                let modelImage = "image4.png";
-                zip.file(`ppt/media/${modelImage}`, imageBuffer); // This is the placeholder file name
-                zip.file(`ppt/media/image${imageId}.png`, imageBuffer); // Use imageId to replace the actual image
+                // Replace image with "20"
+                // let modelImage = "image4.png";
+                // zip.file(`ppt/media/${modelImage}`, imageBuffer); // This is the placeholder file name
+                zip.file(`ppt/media/image20.png`, imageBuffer); // Use imageId to replace the actual image
 
             } catch (error) {
                 console.log(error);
@@ -279,7 +279,8 @@ export default async function proccessAndDownloadPPTX({
         const firstSlideDoc = parser.parseFromString(firstSlideXml, "application/xml");
 
         if (companyLogoPath !== '') {
-            await replaceImage(zip, 'rId6', companyLogoPath);
+            console.log(companyLogoPath);
+            await replaceImage(zip, companyLogoPath);
         }
 
         const updatedSlideXml = new XMLSerializer().serializeToString(firstSlideDoc);
