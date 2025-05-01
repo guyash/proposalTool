@@ -438,13 +438,16 @@ export default async function proccessAndDownloadPPTX({
 
         const setLeftAlignmentAndLineSpacing = (paragraph, lineSpacing = null) => {
             let pPr = findOrCreateChildElement(paragraph, 'a:pPr');
+        
+            // 🚀 Fix: Set paragraph attribute as well
+            pPr.setAttribute('algn', 'just');  // <- new line
+        
             let algn = findOrCreateChildElement(pPr, 'a:algn');
-            algn.setAttribute('val', 'l'); // 'l' for left alignment
-
+            algn.setAttribute('val', 'just'); // keep setting child node too
+        
             if (lineSpacing !== null) {
                 let lnSpc = findOrCreateChildElement(pPr, 'a:lnSpc');
                 let spcPct = findOrCreateChildElement(lnSpc, 'a:spcPct');
-                // PowerPoint uses 100,000 as 100% line spacing
                 spcPct.setAttribute('val', Math.round(lineSpacing * 100000).toString());
             }
         };
