@@ -1,5 +1,4 @@
 import { Button, Box, Typography } from '@mui/material';
-import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import { getDateString } from '../utils/proccessAndDownloadPPTX';
 import TextSnippetIcon from '@mui/icons-material/TextSnippet';
 
@@ -32,7 +31,7 @@ const DownloadSRTFileButton = ({ isTranscriptionDone, outputFile, proposalTitle 
             const link = document.createElement('a');
             link.href = url;
             const dateString = getDateString();
-            const finalFn = proposalTitle + " " + dateString + ".srt";
+            const finalFn = proposalTitle + " " + dateString + ".txt";
             link.setAttribute('download', finalFn);
             document.body.appendChild(link);
             link.click();
@@ -53,7 +52,7 @@ const DownloadSRTFileButton = ({ isTranscriptionDone, outputFile, proposalTitle 
                 onClick={() => handleDownloadSRTClick(outputFile.chunks)}
                 fullWidth
             >
-                Download SRT file
+                Download Transcription
             </Button>
             {!isTranscriptionDone && <Typography
                 variant="caption"
