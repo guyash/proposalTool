@@ -382,10 +382,6 @@ function Tool() {
                         email: contact.email
                     }))
                 }));
-
-                console.log('$$$$$$$$$');
-                console.log(formattedData);
-                console.log('$$$$$$$$$');
                 
                 setFetchedCompanyOptions(formattedData);
             } catch (err) {

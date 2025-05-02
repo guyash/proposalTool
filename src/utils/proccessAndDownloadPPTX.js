@@ -25,7 +25,7 @@ function modifyLineSpacing(xmlContent) {
     return xmlContent.replace(pPrRegex, (match, inner) => {
         if (/<a:lnSpc/.test(inner)) {
             return match.replace(/<a:lnSpc>[\s\S]*?<\/a:lnSpc>/,
-                '<a:lnSpc><a:spcPct val="150000"/></a:lnSpc>');
+                '<a:lnSpc><a:spcPct val="100000"/></a:lnSpc>');
         } else {
             return match.replace('>', '><a:lnSpc><a:spcPct val="150000"/></a:lnSpc>');
         }
@@ -81,17 +81,17 @@ function inspectTextboxPositions(slideDoc, index) {
                 //     const width = ext.getAttribute('cx');
                 //     const height = ext.getAttribute('cy');
 
-                    // console.log(`  Position: x=${x}, y=${y}`);
-                    // console.log(`  Size: width=${width}, height=${height}`);
+                // console.log(`  Position: x=${x}, y=${y}`);
+                // console.log(`  Size: width=${width}, height=${height}`);
 
-                    // Show how to move this textbox
-                    // console.log('\n  To move this textbox:');
-                    // console.log(`  const shape = slideDoc.getElementsByTagName('p:sp')[${i}];`);
-                    // console.log(`  const xfrm = shape.getElementsByTagName('a:xfrm')[0];`);
-                    // console.log(`  const off = xfrm.getElementsByTagName('a:off')[0];`);
-                    // console.log(`  // Move 100000 EMUs right and 50000 EMUs down`);
-                    // console.log(`  off.setAttribute('x', '${parseInt(x) + 100000}');`);
-                    // console.log(`  off.setAttribute('y', '${parseInt(y) + 50000}');`);
+                // Show how to move this textbox
+                // console.log('\n  To move this textbox:');
+                // console.log(`  const shape = slideDoc.getElementsByTagName('p:sp')[${i}];`);
+                // console.log(`  const xfrm = shape.getElementsByTagName('a:xfrm')[0];`);
+                // console.log(`  const off = xfrm.getElementsByTagName('a:off')[0];`);
+                // console.log(`  // Move 100000 EMUs right and 50000 EMUs down`);
+                // console.log(`  off.setAttribute('x', '${parseInt(x) + 100000}');`);
+                // console.log(`  off.setAttribute('y', '${parseInt(y) + 50000}');`);
                 // }
             }
 
@@ -208,6 +208,143 @@ async function deleteSlides(zip, programStructure, methodology, model) {
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function insertCompanyLogo(zip, companyLogoPath) {
+    // Step 1: Fetch the image from the URL
+    const response = await fetch(companyLogoPath);
+    const imageBlob = await response.blob();
+    
+    // Step 2: Get image dimensions to calculate aspect ratio
+    const imageDimensions = await getImageDimensions(imageBlob);
+    const aspectRatio = imageDimensions.height / imageDimensions.width;
+    const cx = 2000000; // Width in EMUs (2 inches)
+    const cy = Math.round(cx * aspectRatio); // Height in EMUs preserving aspect ratio
+    const margin = 137160;            // 0.15 inch
+    const offX   = 6600000 - cx - margin;   // slide width  in EMU – logo – margin
+    const offY   = 9600000 - cy - margin;   // slide height in EMU – logo – margin
+    
+    // Step 3: Add the image to the ZIP file
+    zip.file("ppt/media/logo1.png", imageBlob);
+    
+    // Step 4: Update the relationship file
+    const relsFileContent = await zip.file("ppt/slides/_rels/slide1.xml.rels").async("text");
+    
+    // Instead of using DOM methods, we'll manually insert the relationship
+    // Find the closing Relationships tag
+    const closingTag = "</Relationships>";
+    const relationshipXml = `  <Relationship Id="rId100" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/logo1.png" />\n${closingTag}`;
+    const updatedRelsContent = relsFileContent.replace(closingTag, relationshipXml);
+    
+    zip.file("ppt/slides/_rels/slide1.xml.rels", updatedRelsContent);
+    
+    // Step 5: Update the slide XML to include the picture
+    const slideFileContent = await zip.file("ppt/slides/slide1.xml").async("text");
+    
+    // Find the position to insert our p:pic element
+    // Look for the closing p:spTree tag
+    const spTreeClosingTagPos = slideFileContent.lastIndexOf("</p:spTree>");
+    
+    if (spTreeClosingTagPos === -1) {
+      throw new Error("Could not find </p:spTree> tag in slide1.xml");
+    }
+    
+    // Create the p:pic XML string with the correct namespaces
+    const picXml = `  <p:pic>
+      <p:nvPicPr>
+        <p:cNvPr id="1000" name="Company Logo"/>
+        <p:cNvPicPr>
+          <a:picLocks noChangeAspect="1"/>
+        </p:cNvPicPr>
+        <p:nvPr/>
+      </p:nvPicPr>
+      <p:blipFill>
+        <a:blip r:embed="rId100"/>
+        <a:stretch>
+          <a:fillRect/>
+        </a:stretch>
+      </p:blipFill>
+      <p:spPr>
+        <a:xfrm>
+          <a:off x="${offX}" y="${offY}"/>
+          <a:ext cx="${cx}" cy="${cy}"/>
+        </a:xfrm>
+        <a:prstGeom prst="rect">
+          <a:avLst/>
+        </a:prstGeom>
+      </p:spPr>
+    </p:pic>\n`;
+    
+    // Insert the p:pic element before the closing p:spTree tag
+    const updatedSlideContent = slideFileContent.substring(0, spTreeClosingTagPos) + 
+                                picXml + 
+                                slideFileContent.substring(spTreeClosingTagPos);
+    
+    // Check if we need to add the r namespace declaration to the root element
+    let finalSlideContent = updatedSlideContent;
+    if (!finalSlideContent.includes('xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"')) {
+      // Add the r namespace to the root p:sld element
+      finalSlideContent = finalSlideContent.replace(/<p:sld\s+/,
+        '<p:sld xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
+    }
+    
+    zip.file("ppt/slides/slide1.xml", finalSlideContent);
+    
+    // Helper function to get image dimensions
+    async function getImageDimensions(blob) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          resolve({
+            width: img.width,
+            height: img.height
+          });
+          URL.revokeObjectURL(img.src); // Clean up
+        };
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export default async function proccessAndDownloadPPTX({
     insights,
     selectedCurrency,
@@ -226,9 +363,6 @@ export default async function proccessAndDownloadPPTX({
 
 }) {
     try {
-        console.log('@@@@@@@');
-        console.log(companyLogoPath);
-        console.log('@@@@@@@');
 
         const companyName = company ? company.name : "";
         const serializer = new XMLSerializer();
@@ -257,34 +391,34 @@ export default async function proccessAndDownloadPPTX({
         });
 
 
-        const replaceImage = async (zip, companyLogoPath) => {
-            try {
-                const imageResponse = await fetch(companyLogoPath);
-                if (!imageResponse.ok) {
-                    throw new Error("Failed to fetch the image.");
-                }
+        // const replaceImage = async (zip, companyLogoPath) => {
+        //     try {
+        //         const imageResponse = await fetch(companyLogoPath);
+        //         if (!imageResponse.ok) {
+        //             throw new Error("Failed to fetch the image.");
+        //         }
+        //         console.log('imageResponse:');
+        //         console.log(imageResponse);
 
-                // Convert the image to an array buffer
-                const imageBuffer = await imageResponse.arrayBuffer();
+        //         // Convert the image to an array buffer
+        //         const imageBuffer = await imageResponse.arrayBuffer();
 
-                // Replace image with "20"
-                // let modelImage = "image4.png";
-                // zip.file(`ppt/media/${modelImage}`, imageBuffer); // This is the placeholder file name
-                zip.file(`ppt/media/image20.png`, imageBuffer); // Use imageId to replace the actual image
+        //         zip.file(`ppt/media/image20.png`, imageBuffer); // Use imageId to replace the actual image
 
-            } catch (error) {
-                console.log(error);
-            }
-        };
+        //     } catch (error) {
+        //         console.log(error);
+        //     }
+        // };
 
         // Usage
         const firstSlideFile = slideFiles[0];
         const firstSlideXml = await zip.file(firstSlideFile).async("string");
         const firstSlideDoc = parser.parseFromString(firstSlideXml, "application/xml");
 
-        if (companyLogoPath !== '') {
-            await replaceImage(zip, companyLogoPath);
-        }
+        // if (companyLogoPath !== '') {
+        //     console.log('replacing logo');
+        //     await replaceImage(zip, companyLogoPath);
+        // }
 
         const updatedSlideXml = new XMLSerializer().serializeToString(firstSlideDoc);
         zip.file(firstSlideFile, updatedSlideXml);
@@ -429,13 +563,13 @@ export default async function proccessAndDownloadPPTX({
 
         const setLeftAlignmentAndLineSpacing = (paragraph, lineSpacing = null) => {
             let pPr = findOrCreateChildElement(paragraph, 'a:pPr');
-        
+
             // 🚀 Fix: Set paragraph attribute as well
             pPr.setAttribute('algn', 'just');  // <- new line
-        
+
             let algn = findOrCreateChildElement(pPr, 'a:algn');
             algn.setAttribute('val', 'just'); // keep setting child node too
-        
+
             if (lineSpacing !== null) {
                 let lnSpc = findOrCreateChildElement(pPr, 'a:lnSpc');
                 let spcPct = findOrCreateChildElement(lnSpc, 'a:spcPct');
@@ -588,8 +722,8 @@ export default async function proccessAndDownloadPPTX({
 
             replaceText(slideDoc, '<DESIRED_OUTCOMES>', desiredOutcomesWithIntro);
 
-            replaceText(slideDoc, '<ABN>', customersSelectedRows[0].name);
-            replaceText(slideDoc, '<ABT>', customersSelectedRows[0].position);
+            replaceText(slideDoc, '<ABN>', customersSelectedRows.length > 0 ? customersSelectedRows[0].name : '');
+            replaceText(slideDoc, '<ABT>', customersSelectedRows.length > 0 ? customersSelectedRows[0].position : '');
             replaceText(slideDoc, '<DATE>', getCurrentFormattedDate());
             replaceText(slideDoc, 'Signed on behalf of <COMPANY>', 'Signed on behalf of ' + companyName);
 
@@ -690,9 +824,9 @@ export default async function proccessAndDownloadPPTX({
 
                 try {
                     inspectTextboxPositions(slideDoc, index);
-                    
+
                     const shape = slideDoc.getElementsByTagName('p:sp')[16];
-                    
+
                     const xfrm = shape.getElementsByTagName('a:xfrm')[0];
                     const off = xfrm.getElementsByTagName('a:off')[0];
 
@@ -712,6 +846,10 @@ export default async function proccessAndDownloadPPTX({
             const serializedSlideXml = serializer.serializeToString(slideDoc);
             zip.file(slideFile, serializedSlideXml);
 
+        }
+
+        if (companyLogoPath) {
+            await insertCompanyLogo(zip, companyLogoPath);
         }
 
         zip = await modifyLineSpacingInZip(zip);
