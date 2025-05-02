@@ -27,7 +27,7 @@ function modifyLineSpacing(xmlContent) {
             return match.replace(/<a:lnSpc>[\s\S]*?<\/a:lnSpc>/,
                 '<a:lnSpc><a:spcPct val="100000"/></a:lnSpc>');
         } else {
-            return match.replace('>', '><a:lnSpc><a:spcPct val="150000"/></a:lnSpc>');
+            return match.replace('>', '><a:lnSpc><a:spcPct val="100000"/></a:lnSpc>');
         }
     });
 }
@@ -225,41 +225,41 @@ async function insertCompanyLogo(zip, companyLogoPath) {
     // Step 1: Fetch the image from the URL
     const response = await fetch(companyLogoPath);
     const imageBlob = await response.blob();
-    
+
     // Step 2: Get image dimensions to calculate aspect ratio
     const imageDimensions = await getImageDimensions(imageBlob);
     const aspectRatio = imageDimensions.height / imageDimensions.width;
     const cx = 2000000; // Width in EMUs (2 inches)
     const cy = Math.round(cx * aspectRatio); // Height in EMUs preserving aspect ratio
     const margin = 137160;            // 0.15 inch
-    const offX   = 6600000 - cx - margin;   // slide width  in EMU – logo – margin
-    const offY   = 9600000 - cy - margin;   // slide height in EMU – logo – margin
-    
+    const offX = 6600000 - cx - margin;   // slide width  in EMU – logo – margin
+    const offY = 9600000 - cy - margin;   // slide height in EMU – logo – margin
+
     // Step 3: Add the image to the ZIP file
     zip.file("ppt/media/logo1.png", imageBlob);
-    
+
     // Step 4: Update the relationship file
     const relsFileContent = await zip.file("ppt/slides/_rels/slide1.xml.rels").async("text");
-    
+
     // Instead of using DOM methods, we'll manually insert the relationship
     // Find the closing Relationships tag
     const closingTag = "</Relationships>";
     const relationshipXml = `  <Relationship Id="rId100" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/logo1.png" />\n${closingTag}`;
     const updatedRelsContent = relsFileContent.replace(closingTag, relationshipXml);
-    
+
     zip.file("ppt/slides/_rels/slide1.xml.rels", updatedRelsContent);
-    
+
     // Step 5: Update the slide XML to include the picture
     const slideFileContent = await zip.file("ppt/slides/slide1.xml").async("text");
-    
+
     // Find the position to insert our p:pic element
     // Look for the closing p:spTree tag
     const spTreeClosingTagPos = slideFileContent.lastIndexOf("</p:spTree>");
-    
+
     if (spTreeClosingTagPos === -1) {
-      throw new Error("Could not find </p:spTree> tag in slide1.xml");
+        throw new Error("Could not find </p:spTree> tag in slide1.xml");
     }
-    
+
     // Create the p:pic XML string with the correct namespaces
     const picXml = `  <p:pic>
       <p:nvPicPr>
@@ -285,37 +285,37 @@ async function insertCompanyLogo(zip, companyLogoPath) {
         </a:prstGeom>
       </p:spPr>
     </p:pic>\n`;
-    
+
     // Insert the p:pic element before the closing p:spTree tag
-    const updatedSlideContent = slideFileContent.substring(0, spTreeClosingTagPos) + 
-                                picXml + 
-                                slideFileContent.substring(spTreeClosingTagPos);
-    
+    const updatedSlideContent = slideFileContent.substring(0, spTreeClosingTagPos) +
+        picXml +
+        slideFileContent.substring(spTreeClosingTagPos);
+
     // Check if we need to add the r namespace declaration to the root element
     let finalSlideContent = updatedSlideContent;
     if (!finalSlideContent.includes('xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"')) {
-      // Add the r namespace to the root p:sld element
-      finalSlideContent = finalSlideContent.replace(/<p:sld\s+/,
-        '<p:sld xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
+        // Add the r namespace to the root p:sld element
+        finalSlideContent = finalSlideContent.replace(/<p:sld\s+/,
+            '<p:sld xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
     }
-    
+
     zip.file("ppt/slides/slide1.xml", finalSlideContent);
-    
+
     // Helper function to get image dimensions
     async function getImageDimensions(blob) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-          resolve({
-            width: img.width,
-            height: img.height
-          });
-          URL.revokeObjectURL(img.src); // Clean up
-        };
-        img.src = URL.createObjectURL(blob);
-      });
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                resolve({
+                    width: img.width,
+                    height: img.height
+                });
+                URL.revokeObjectURL(img.src); // Clean up
+            };
+            img.src = URL.createObjectURL(blob);
+        });
     }
-  }
+}
 
 
 
@@ -607,52 +607,99 @@ export default async function proccessAndDownloadPPTX({
                 }
             }
 
-            const updateCellContent = (cell, content, isCenterHorizontally = false) => {
+            const updateCellContent = (cell, content, useNewCenteredStyle = false) => {
                 // Clear any existing content from the cell
                 while (cell.firstChild) {
                     cell.removeChild(cell.firstChild);
                 }
-
-                // Create the necessary structure for text inside the cell
+            
+                // --- Create <a:txBody> structure ---
                 const textBody = slideDoc.createElementNS(namespaces.a, 'a:txBody');
+            
                 const bodyPr = slideDoc.createElementNS(namespaces.a, 'a:bodyPr');
-                bodyPr.setAttribute('anchor', 'ctr');  // Vertically center the text
+                if (useNewCenteredStyle) {
+                    // For new centered style, bodyPr stays empty (no anchor)
+                } else {
+                    bodyPr.setAttribute('anchor', 't'); // Old style: top-align text
+                }
                 textBody.appendChild(bodyPr);
-
+            
                 const lstStyle = slideDoc.createElementNS(namespaces.a, 'a:lstStyle');
                 textBody.appendChild(lstStyle);
-
-                const p = slideDoc.createElementNS(namespaces.a, 'a:p');  // Create a paragraph element
-
-                // Create a run for text content
-                const r = slideDoc.createElementNS(namespaces.a, 'a:r');
-                const t = slideDoc.createElementNS(namespaces.a, 'a:t');
-                t.textContent = content;  // Set the actual text content
-
-                // Create run properties and set the font to Calibri
-                const rPr = slideDoc.createElementNS(namespaces.a, 'a:rPr');
-                const latin = slideDoc.createElementNS(namespaces.a, 'a:latin');
-                latin.setAttribute('typeface', 'Calibri');  // Set font to Calibri
-                rPr.appendChild(latin);
-                r.appendChild(rPr);  // Append run properties to the run
-
-                // Add text content to the run
-                r.appendChild(t);
-                p.appendChild(r);  // Add the run to the paragraph
-
-                // Optionally center the text horizontally
-                if (isCenterHorizontally) {
+            
+                const p = slideDoc.createElementNS(namespaces.a, 'a:p');
+            
+                if (useNewCenteredStyle) {
+                    // In new style, add <a:pPr> first and center-align
                     const pPr = slideDoc.createElementNS(namespaces.a, 'a:pPr');
-                    pPr.setAttribute('algn', 'ctr');  // Center the text horizontally
+                    pPr.setAttribute('algn', 'ctr');
                     p.appendChild(pPr);
                 }
-
-                // Append the paragraph to the text body
+            
+                // Create run <a:r>
+                const r = slideDoc.createElementNS(namespaces.a, 'a:r');
+                const rPr = slideDoc.createElementNS(namespaces.a, 'a:rPr');
+            
+                if (useNewCenteredStyle) {
+                    rPr.setAttribute('dirty', '0');
+                }
+                const latin = slideDoc.createElementNS(namespaces.a, 'a:latin');
+                latin.setAttribute('typeface', 'Calibri');
+                rPr.appendChild(latin);
+            
+                const t = slideDoc.createElementNS(namespaces.a, 'a:t');
+                t.textContent = content;
+            
+                r.appendChild(rPr);
+                r.appendChild(t);
+                p.appendChild(r);
+            
                 textBody.appendChild(p);
-
-                // Append the entire text body to the cell
                 cell.appendChild(textBody);
+            
+                if (useNewCenteredStyle) {
+                    // --- Also add <a:tcPr> with borders and styles ---
+                    const tcPr = slideDoc.createElementNS(namespaces.a, 'a:tcPr');
+            
+                    const lnT = slideDoc.createElementNS(namespaces.a, 'a:lnT');
+                    lnT.setAttribute('w', '12700');
+                    lnT.setAttribute('cap', 'flat');
+                    lnT.setAttribute('cmpd', 'sng');
+                    lnT.setAttribute('algn', 'ctr');
+            
+                    const solidFill = slideDoc.createElementNS(namespaces.a, 'a:solidFill');
+                    const schemeClr = slideDoc.createElementNS(namespaces.a, 'a:schemeClr');
+                    schemeClr.setAttribute('val', 'tx1');
+                    solidFill.appendChild(schemeClr);
+            
+                    const prstDash = slideDoc.createElementNS(namespaces.a, 'a:prstDash');
+                    prstDash.setAttribute('val', 'solid');
+            
+                    const round = slideDoc.createElementNS(namespaces.a, 'a:round');
+            
+                    const headEnd = slideDoc.createElementNS(namespaces.a, 'a:headEnd');
+                    headEnd.setAttribute('type', 'none');
+                    headEnd.setAttribute('w', 'med');
+                    headEnd.setAttribute('len', 'med');
+            
+                    const tailEnd = slideDoc.createElementNS(namespaces.a, 'a:tailEnd');
+                    tailEnd.setAttribute('type', 'none');
+                    tailEnd.setAttribute('w', 'med');
+                    tailEnd.setAttribute('len', 'med');
+            
+                    lnT.appendChild(solidFill);
+                    lnT.appendChild(prstDash);
+                    lnT.appendChild(round);
+                    lnT.appendChild(headEnd);
+                    lnT.appendChild(tailEnd);
+            
+                    tcPr.appendChild(lnT);
+            
+                    cell.appendChild(tcPr);
+                }
             };
+            
+
 
             // Update the content for each cell in the row
             if (cells.length >= 3) {
@@ -722,10 +769,10 @@ export default async function proccessAndDownloadPPTX({
 
             replaceText(slideDoc, '<DESIRED_OUTCOMES>', desiredOutcomesWithIntro);
 
-            replaceText(slideDoc, '<ABN>', customersSelectedRows.length > 0 ? customersSelectedRows[0].name : '');
-            replaceText(slideDoc, '<ABT>', customersSelectedRows.length > 0 ? customersSelectedRows[0].position : '');
-            replaceText(slideDoc, '<DATE>', getCurrentFormattedDate());
-            replaceText(slideDoc, 'Signed on behalf of <COMPANY>', 'Signed on behalf of ' + companyName);
+            replaceText(slideDoc, '<ABN>', customersSelectedRows.length > 0 ? customersSelectedRows[0].name : '', true);
+            replaceText(slideDoc, '<ABT>', customersSelectedRows.length > 0 ? customersSelectedRows[0].position : '', true);
+            replaceText(slideDoc, '<DATE>', getCurrentFormattedDate(), true);
+            replaceText(slideDoc, 'Signed on behalf of <COMPANY>', 'Signed on behalf of ' + companyName, true);
 
             customersSelectedRows = customersSelectedRows.slice(0, 3);
 
