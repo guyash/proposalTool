@@ -28,6 +28,7 @@ export default function ProgramStructureAutocomplete({ onChange, model }) {
             options={programStructureOptions}
             disableCloseOnSelect
             getOptionLabel={(option) => option.title}
+            isOptionEqualToValue={(option, value) => option.title === value.title}
             renderOption={(props, option, { selected }) => {
                 const { key, ...optionProps } = props;
                 return (
